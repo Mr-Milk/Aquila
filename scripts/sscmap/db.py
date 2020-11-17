@@ -1,6 +1,6 @@
+from sqlalchemy import Column, Float, String
+from sqlalchemy.dialects.postgresql import ARRAY, JSON, UUID
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, Float
-from sqlalchemy.dialects.postgresql import ARRAY, UUID, JSON
 from sqlalchemy.ext.indexable import index_property
 
 Base = declarative_base()
@@ -59,3 +59,7 @@ class GroupLevel(Base):
 
     data_id = Column(String, primary_key=True)
     levels_table = Column(JSON)
+
+
+def init_db(engine):
+    Base.metadata.create_all(engine)

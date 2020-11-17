@@ -60,7 +60,6 @@ GRANT ALL PRIVILEGES ON DATABASE "sscmap" to baize;
 
 - **data_id**: VARCHAR, PRIMARY KEY
 - data_meta: JSON
-- levels_tables: JSON
 
 ```json
 {"data_id": "101016jcell201808039-f6b993db", 
