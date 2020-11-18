@@ -48,10 +48,9 @@ class CellExpression(Base):
     __tablename__ = "cell_expression"
 
     cell_id = Column(UUID, primary_key=True)
-    markers = Column(ARRAY(String))
     expression = Column(ARRAY(Float))
     roi_id = Column(UUID, index=True)
-    data_id = Column(UUID, index=True)
+    data_id = Column(String, index=True)
 
 
 class GroupLevel(Base):

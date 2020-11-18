@@ -110,7 +110,6 @@ GRANT ALL PRIVILEGES ON DATABASE "sscmap" to baize;
 ### cell_expression
 
 - **cell_id**: UUID, PRIMARY KEY
-- markers: ARRAY[VARCHAR]
 - expression: ARRAY[FLOAT]
 - roi_id: UUID, INDEX
 - data_id: UUID, INDEX

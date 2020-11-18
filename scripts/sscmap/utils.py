@@ -35,6 +35,7 @@ def formalize_markers(value):
         raise TypeError("Expected str")
 
     value = [re.sub(r'\s', "-", i) for i in value]
+    value = [re.sub(r'_', "-", i) for i in value]
     return value
 
 

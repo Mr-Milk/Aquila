@@ -26,7 +26,7 @@ class Record:
     cell_density_tb: Optional[pd.DataFrame] = None
     spatial_distribution_tb: Optional[pd.DataFrame] = None
     entropy_shannon_tb: Optional[pd.DataFrame] = None
-    entropy_alteiri_tb: Optional[pd.DataFrame] = None
+    entropy_altieri_tb: Optional[pd.DataFrame] = None
 
     # cell_info
     cell_info_tb: Optional[pd.DataFrame] = None
@@ -68,6 +68,8 @@ class Record:
         if cell_type_key is None:
             record_meta.has_cell_type = False
             self.computed = False
+        else:
+            self.computed = True
 
         data = data.copy()
         cell_count = len(data)
@@ -98,13 +100,9 @@ class Record:
         self.levels_table = data.obs[['roi_id'] + groups_keys]
         self.cell_info_tb = data.obs[['cell_id', 'cell_x', 'cell_y', 'cell_type', 'roi_id']]
 
-        markers = data.var[markers_key]
-        self.cell_expression_tb = pd.DataFrame({
-            "cell_id": data.obs['cell_id'],
-            "markers": [markers for _ in range(cell_count)],
-            "expression": data.X.tolist(),
-            "roi_id": data.obs['roi_id'],
-        })
+        markers = data.var[markers_key].tolist()
+        self.cell_expression_tb = pd.DataFrame(data=data.X, columns=markers)
+        self.cell_expression_tb.insert(0, 'cell_id', cell_id)
 
         record_meta.markers = markers
         record_meta.cell_count = cell_count
@@ -120,8 +118,12 @@ class Record:
         self.cell_info_db = self.cell_info_tb.copy(deep=True)
         self.cell_info_db['data_id'] = [self.data_id for _ in range(cell_count)]
 
-        self.cell_expression_db = self.cell_expression_tb.copy(deep=True)
-        self.cell_expression_db['data_id'] = [self.data_id for _ in range(cell_count)]
+        self.cell_expression_db = pd.DataFrame({
+            "cell_id": data.obs['cell_id'],
+            "expression": data.X.tolist(),
+            "roi_id": data.obs['roi_id'],
+            "data_id": [self.data_id for _ in range(cell_count)]
+        })
 
         self.group_level_db = pd.DataFrame({
             "data_id": [self.data_id],
@@ -133,11 +135,17 @@ class Record:
             st.CONFIG.CELL_TYPE_KEY = cell_type_key
             st.CONFIG.CENTROID_KEY = centroid_key
             st.CONFIG.MULTI_PROCESSING = True
-            self.cell_components_tb = st.cell_components(data, export=False, return_df=True)
-            self.cell_density_tb = st.cell_density(data, export=False, return_df=True)
-            self.spatial_distribution_tb = st.spatial_distribution(data, export=False, return_df=True)
-            self.entropy_shannon_tb = st.spatial_heterogeneity(data, method="shannon", export=False, return_df=True)
-            self.entropy_alteiri_tb = st.spatial_heterogeneity(data, method="alteiri", export=False, return_df=True)
+            st.CONFIG.VERBOSE = False
+            self.cell_components_tb = st.cell_components(data, export=False, return_df=True)\
+                .reset_index(groups_keys).reset_index(drop=True)
+            self.cell_density_tb = st.cell_density(data, export=False, return_df=True)\
+                .reset_index(groups_keys).reset_index(drop=True)
+            self.spatial_distribution_tb = st.spatial_distribution(data, export=False, return_df=True)\
+                .reset_index(groups_keys).reset_index(drop=True)
+            self.entropy_shannon_tb = st.spatial_heterogeneity(data, method="shannon", export=False, return_df=True)\
+                .reset_index(groups_keys).reset_index(drop=True)
+            self.entropy_altieri_tb = st.spatial_heterogeneity(data, method="altieri", export=False, return_df=True)\
+                .reset_index(groups_keys).reset_index(drop=True)
 
             self.data_stats_db = pd.DataFrame({
                 "data_id": [self.data_id],
@@ -145,7 +153,7 @@ class Record:
                 "cell_density": [self.cell_density_tb.to_json(orient="records", force_ascii=False)],
                 "spatial_distribution": [self.spatial_distribution_tb.to_json(orient="records", force_ascii=False)],
                 "entropy_shannon": [self.entropy_shannon_tb.to_json(orient="records", force_ascii=False)],
-                "entropy_alteiri": [self.entropy_alteiri_tb.to_json(orient="records", force_ascii=False)]
+                "entropy_altieri": [self.entropy_altieri_tb.to_json(orient="records", force_ascii=False)]
             })
         else:
             self.data_stats_db = pd.DataFrame({
@@ -154,7 +162,7 @@ class Record:
                 "cell_density": [""],
                 "spatial_distribution": [""],
                 "entropy_shannon": [""],
-                "entropy_alteiri": [""],
+                "entropy_altieri": [""],
             })
 
     def to_static(self, export=None, static=True, zipped=True):
@@ -183,9 +191,9 @@ class Record:
         cell_density_path = computed_dir / "cell_density.txt"
         spatial_distribution_path = computed_dir / "spatial_distribution.txt"
         entropy_shannon_path = computed_dir / "entropy_shannon.txt"
-        entropy_alteiri_path = computed_dir / "entropy_alteiri.txt"
+        entropy_altieri_path = computed_dir / "entropy_altieri.txt"
         computed_tables = [cell_components_path, cell_density_path, spatial_distribution_path,
-                           entropy_shannon_path, entropy_alteiri_path]
+                           entropy_shannon_path, entropy_altieri_path]
         if self.computed:
             try:
                 os.mkdir(computed_dir)
@@ -195,15 +203,15 @@ class Record:
             self.cell_density_tb.to_csv(cell_density_path, sep="\t", index=False)
             self.spatial_distribution_tb.to_csv(spatial_distribution_path, sep="\t", index=False)
             self.entropy_shannon_tb.to_csv(entropy_shannon_path, sep="\t", index=False)
-            self.entropy_alteiri_tb.to_csv(entropy_alteiri_path, sep="\t", index=False)
+            self.entropy_altieri_tb.to_csv(entropy_altieri_path, sep="\t", index=False)
 
         if zipped:
             with ZipFile(export_zip, "w") as file:
                 for t in data_tables:
-                    file.write(t)
+                    file.write(t, Path("/".join(t.parts[-2:])))
                 if self.computed:
                     for t in computed_tables:
-                        file.write(t)
+                        file.write(t, Path("/".join(t.parts[-3:])))
 
         if not static:
             try:
