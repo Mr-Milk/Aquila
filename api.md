@@ -3,22 +3,29 @@
 ```
 root: api.baize.com
 
-GET /data/list
+GET /data
 get all the data_id
 
-GET /data/meta/{data_id}
+['id1', 'id2', ...]
+
+GET /meta/{data_id}
 get the meta of a data
 
-GET /data/stats/{type}/{data_id}
+DataMeta:
+{}
+
+GET /stats/{type}/{data_id}
 get stats of a data
 
-GET /data/roi/{data_id}
+json
+
+GET /roi/{data_id}
 get all roi_id and their levels of data
 
-GET /data/cell_info/{roi_id}
+GET /cell_info/{roi_id}
 get cell info
 
-GET /data/cell_exp/{roi_id}
+GET /cell_exp/{roi_id}
 get cell exp
 
 GET /data/query/?{}

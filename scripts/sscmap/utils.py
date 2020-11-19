@@ -12,16 +12,66 @@ def get_data_id(text):
         raise ValueError("Empty")
 
 
-def formalize(value):
-    if isinstance(value, List):
-        value = [str(i).lower().capitalize() for i in value]
+def formalize_str(value):
     if isinstance(value, str):
-        value = [str(value).lower().capitalize()]
-    if isinstance(value, float):
-        if value.is_integer():
-            value = [int(value)]
+        value = str(value).lower().capitalize()
+    else:
+        raise TypeError(f"Expected str, {value}")
+    return value
+
+
+def formalize_uint(value):
+    if isinstance(value, str):
+        try:
+            value = float(value)
+        except TypeError:
+            raise TypeError(f"Expected a number, {value}")
+
+    elif isinstance(value, float):
+        if value < 0:
+            raise ValueError(f"Your input number is negative, {value}")
+        elif value.is_integer():
+            value = int(value)
         else:
             raise TypeError(f"Your input number has decimal, {value}")
+    elif isinstance(value, int):
+        if value < 0:
+            raise ValueError(f"Your input number is negative, {value}")
+    else:
+        raise TypeError(f"Expected a number, {value}")
+    return value
+
+
+def formalize_list_uint(value):
+    if isinstance(value, List):
+        if len(value) == 0:
+            raise ValueError("Empty list")
+        new_value = []
+        for i in value:
+            i = formalize_uint(i)
+            new_value.append(i)
+        value = new_value
+    elif isinstance(value, (int, float)):
+        value = formalize_uint(value)
+    else:
+        raise TypeError("Expected a list of positive int")
+
+    return value
+
+
+def formalize_list_str(value):
+    if isinstance(value, List):
+        if len(value) == 0:
+            raise ValueError("Empty list")
+        new_value = []
+        for i in value:
+            i = formalize_str(i)
+            new_value.append(i)
+        value = new_value
+    elif isinstance(value, str):
+        value = [value]
+    else:
+        raise TypeError("Expected a list of str")
     return value
 
 

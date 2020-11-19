@@ -69,6 +69,7 @@ class Record:
             record_meta.has_cell_type = False
             self.computed = False
         else:
+            record_meta.has_cell_type = True
             self.computed = True
 
         data = data.copy()
@@ -107,7 +108,7 @@ class Record:
         record_meta.markers = markers
         record_meta.cell_count = cell_count
         record_meta.level_name = groups_keys
-        record_meta.level_count = [len(pd.unique(c)) for _, c in self.levels_table.iteritems()]
+        record_meta.level_count = [len(pd.unique(c)) for _, c in data.obs[groups_keys].iteritems()]
 
         # make db
         self.data_records_db = pd.DataFrame({

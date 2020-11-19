@@ -1,7 +1,6 @@
-from sqlalchemy import Column, Float, String
+from sqlalchemy import Boolean, Column, Float, Integer, String
 from sqlalchemy.dialects.postgresql import ARRAY, JSON, UUID
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.ext.indexable import index_property
 
 Base = declarative_base()
 
@@ -10,16 +9,23 @@ class DataRecord(Base):
     __tablename__ = "data_records"
 
     data_id = Column(String, primary_key=True)
-    data_meta = Column(JSON)
-
-    tissue = index_property("data_meta", "tissue")
-    disease = index_property("data_meta", "disease")
-    disease_subtype = index_property("data_meta", "disease_subtype")
-    molecular = index_property("data_meta", "molecular")
-    year = index_property("data_meta", "year")
-    resolution = index_property("data_meta", "resolution")
-    cell_count = index_property("data_meta", "cell_count")
-    marker_count = index_property("data_meta", "marker_count")
+    technology = Column(String, index=True)
+    species = Column(String, index=True)
+    tissue = Column(String, index=True)
+    disease = Column(String, index=True)
+    disease_subtype = Column(String, index=True)
+    markers = Column(ARRAY(String))
+    molecular = Column(String, index=True)
+    source_name = Column(String)
+    source_url = Column(ARRAY(String))
+    journal = Column(String)
+    level_name = Column(ARRAY(String))
+    level_count = Column(ARRAY(String))
+    year = Column(Integer, index=True)
+    resolution = Column(Integer, index=True)
+    cell_count = Column(Integer, index=True)
+    marker_count = Column(Integer, index=True)
+    has_cell_type = Column(Boolean, index=True)
 
 
 class DataStats(Base):
@@ -40,8 +46,8 @@ class CellInfo(Base):
     cell_x = Column(String)
     cell_y = Column(String)
     cell_type = Column(String)
-    roi_id = Column(UUID)
-    data_id = Column(String)
+    roi_id = Column(UUID, index=True)
+    data_id = Column(String, index=True)
 
 
 class CellExpression(Base):
