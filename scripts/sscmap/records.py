@@ -10,8 +10,7 @@ import spatialtis as st
 import sqlalchemy
 from anndata import AnnData
 
-from .db import (CellExpression, CellInfo, DataRecord, DataStats, GroupLevel,
-                 init_db)
+from .db import CellInfo, DataRecord, DataStats, GroupLevel, init_db
 from .meta import RecordMeta
 
 
@@ -34,7 +33,6 @@ class Record:
 
     # cell_expression
     cell_expression_tb: Optional[pd.DataFrame] = None
-    cell_expression_db: Optional[pd.DataFrame] = None
 
     # group_level
     levels_table: Optional[pd.DataFrame] = None
@@ -98,37 +96,29 @@ class Record:
         data.obs.rename(columns={cell_type_key: 'cell_type'})
 
         self.data_id = record_meta.data_id
-        self.levels_table = data.obs[['roi_id'] + groups_keys]
+        self.levels_table = data.obs[['roi_id'] + groups_keys].drop_duplicates()
         self.cell_info_tb = data.obs[['cell_id', 'cell_x', 'cell_y', 'cell_type', 'roi_id']]
 
         markers = data.var[markers_key].tolist()
-        self.cell_expression_tb = pd.DataFrame(data=data.X, columns=markers)
+        record_meta.markers = markers
+        self.cell_expression_tb = pd.DataFrame(data=data.X, columns=record_meta.markers)
         self.cell_expression_tb.insert(0, 'cell_id', cell_id)
 
-        record_meta.markers = markers
         record_meta.cell_count = cell_count
         record_meta.level_name = groups_keys
         record_meta.level_count = [len(pd.unique(c)) for _, c in data.obs[groups_keys].iteritems()]
 
         # make db
-        self.data_records_db = pd.DataFrame({
-            "data_id": [self.data_id],
-            "data_meta": [record_meta.to_json(force=force)]
-        })
+        self.data_records_db = record_meta.to_tb(force=force)
 
         self.cell_info_db = self.cell_info_tb.copy(deep=True)
         self.cell_info_db['data_id'] = [self.data_id for _ in range(cell_count)]
-
-        self.cell_expression_db = pd.DataFrame({
-            "cell_id": data.obs['cell_id'],
-            "expression": data.X.tolist(),
-            "roi_id": data.obs['roi_id'],
-            "data_id": [self.data_id for _ in range(cell_count)]
-        })
+        self.cell_info_db.insert(4, 'expression', data.X.tolist())
 
         self.group_level_db = pd.DataFrame({
-            "data_id": [self.data_id],
-            "levels_table": [self.levels_table.to_json(orient="records", force_ascii=False)],
+            "roi_id": self.levels_table['roi_id'],
+            "data_id": [self.data_id for _ in range(len(self.levels_table))],
+            "levels_table": self.levels_table.to_json(orient="records", force_ascii=False),
         })
 
         if self.computed:
@@ -178,11 +168,13 @@ class Record:
             os.mkdir(export)
         except FileExistsError:
             pass
+        data_meta_path = export / "meta.txt"
         cell_info_path = export / "cell_info.txt"
         cell_expression_path = export / "cell_expression.txt"
         group_level_path = export / "group_level.txt"
-        data_tables = [cell_info_path, cell_expression_path, group_level_path]
+        data_tables = [data_meta_path, cell_info_path, cell_expression_path, group_level_path]
 
+        self.data_records_db.to_csv(data_meta_path, sep="\t", index=False)
         self.cell_info_tb.to_csv(cell_info_path, sep="\t", index=False)
         self.cell_expression_tb.to_csv(cell_expression_path, sep="\t", index=False)
         self.levels_table.to_csv(group_level_path, sep="\t", index=False)
@@ -229,12 +221,11 @@ class Record:
         self.data_records_db.to_sql(DataRecord.__tablename__, engine, if_exists="append", index=False)
         self.data_stats_db.to_sql(DataStats.__tablename__, engine, if_exists="append", index=False)
         self.cell_info_db.to_sql(CellInfo.__tablename__, engine, if_exists="append", index=False)
-        self.cell_expression_db.to_sql(CellExpression.__tablename__, engine, if_exists="append", index=False)
         self.group_level_db.to_sql(GroupLevel.__tablename__, engine, if_exists="append", index=False)
 
     def drop_from_db(self, data_id=None):
         if data_id is None:
             data_id = self.data_id
-        all_tables = [DataRecord, DataStats, CellInfo, CellExpression, GroupLevel]
+        all_tables = [DataRecord, DataStats, CellInfo, GroupLevel]
         for t in all_tables:
             self.engine.execute(sqlalchemy.delete(t).where(data_id == data_id))

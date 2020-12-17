@@ -20,7 +20,7 @@ class DataRecord(Base):
     source_url = Column(ARRAY(String))
     journal = Column(String)
     level_name = Column(ARRAY(String))
-    level_count = Column(ARRAY(String))
+    level_count = Column(ARRAY(Integer))
     year = Column(Integer, index=True)
     resolution = Column(Integer, index=True)
     cell_count = Column(Integer, index=True)
@@ -46,14 +46,6 @@ class CellInfo(Base):
     cell_x = Column(String)
     cell_y = Column(String)
     cell_type = Column(String)
-    roi_id = Column(UUID, index=True)
-    data_id = Column(String, index=True)
-
-
-class CellExpression(Base):
-    __tablename__ = "cell_expression"
-
-    cell_id = Column(UUID, primary_key=True)
     expression = Column(ARRAY(Float))
     roi_id = Column(UUID, index=True)
     data_id = Column(String, index=True)
@@ -62,7 +54,8 @@ class CellExpression(Base):
 class GroupLevel(Base):
     __tablename__ = "group_level"
 
-    data_id = Column(String, primary_key=True)
+    roi_id = Column(UUID, primary_key=True)
+    data_id = Column(String, index=True)
     levels_table = Column(JSON)
 
 

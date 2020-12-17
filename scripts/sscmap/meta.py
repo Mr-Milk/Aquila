@@ -1,8 +1,8 @@
-import json
 import warnings
 from typing import List, Optional
 from uuid import uuid4
 
+import pandas as pd
 import sqlalchemy
 from crossref.restful import Works
 from sqlalchemy import select
@@ -71,7 +71,7 @@ class RecordMeta:
             else:
                 raise AttributeError(f"Property {k} not exist")
 
-    def to_json(self, force: bool = False):
+    def to_tb(self, force: bool = False):
         meta = {}
         attrs = [
             "data_id",
@@ -94,9 +94,9 @@ class RecordMeta:
             "has_cell_type"
         ]
         for attr in attrs:
-            meta[attr] = if_default(attr, getattr(self, attr), default=getattr(RecordMeta, attr), ignore=force)
+            meta[attr] = [if_default(attr, getattr(self, attr), default=getattr(RecordMeta, attr), ignore=force)]
         assert len(self.level_name) == len(self.level_count)
-        return json.dumps(meta)
+        return pd.DataFrame(meta)
 
     @property
     def data_id(self):
