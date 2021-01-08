@@ -3,12 +3,12 @@
 ```
 root: api.baize.com
 
-GET /data
+✔️GET /data
 get all the data_id
 
 ['id1', 'id2', ...]
 
-GET /meta/{data_id}
+✔GET /meta/{data_id}
 get the meta of a data
 
 DataMeta:
@@ -23,10 +23,7 @@ GET /roi/{data_id}
 get all roi_id and their levels of data
 
 GET /cell_info/{roi_id}
-get cell info
-
-GET /cell_exp/{roi_id}
-get cell exp
+get cell info, include [id, x, y, type, exp]
 
 GET /data/query/?{}
 return a list of data_id

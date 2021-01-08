@@ -1,7 +1,6 @@
 pub use ::config::ConfigError;
 use serde::Deserialize;
 
-
 #[derive(Deserialize)]
 pub struct Config {
     pub host: String,
@@ -9,7 +8,6 @@ pub struct Config {
     pub database_url: String,
     pub max_connections: u32,
 }
-
 
 impl Config {
     pub fn from_env() -> Result<Self, ConfigError> {

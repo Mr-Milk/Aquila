@@ -1,5 +1,5 @@
 from sqlalchemy import Boolean, Column, Float, Integer, String
-from sqlalchemy.dialects.postgresql import ARRAY, JSON, UUID
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -32,31 +32,31 @@ class DataStats(Base):
     __tablename__ = "data_stats"
 
     data_id = Column(String, primary_key=True)
-    cell_components = Column(JSON)
-    cell_density = Column(JSON)
-    spatial_distribution = Column(JSON)
-    entropy_shannon = Column(JSON)
-    entropy_altieri = Column(JSON)
+    cell_components = Column(String)
+    cell_density = Column(String)
+    spatial_distribution = Column(String)
+    entropy_shannon = Column(String)
+    entropy_altieri = Column(String)
 
 
 class CellInfo(Base):
     __tablename__ = "cell_info"
 
-    cell_id = Column(UUID, primary_key=True)
-    cell_x = Column(String)
-    cell_y = Column(String)
+    cell_id = Column(String, primary_key=True)
+    cell_x = Column(Float)
+    cell_y = Column(Float)
     cell_type = Column(String)
     expression = Column(ARRAY(Float))
-    roi_id = Column(UUID, index=True)
+    roi_id = Column(String, index=True)
     data_id = Column(String, index=True)
 
 
 class GroupLevel(Base):
     __tablename__ = "group_level"
 
-    roi_id = Column(UUID, primary_key=True)
+    roi_id = Column(String, primary_key=True)
     data_id = Column(String, index=True)
-    levels_table = Column(JSON)
+    levels_table = Column(String)
 
 
 def init_db(engine):

@@ -1,5 +1,9 @@
 /scripts/data
 
+# IDE cache
+.idea/
+.vscode/
+
 ### Node ###
 
 # Logs

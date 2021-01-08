@@ -1,39 +1,37 @@
+use serde::export::Formatter;
 use serde::Deserialize;
 use std::fmt::{Debug, Display, Result};
-use serde::export::Formatter;
-
 
 fn construct_in_query(field: &str, item: Option<String>, as_type: &str) -> String {
     let sql = match item {
         Some(x) => {
-            let ele: Vec<String> = x.split(",").map(|e| {
-                if as_type == "str" {
-                    format!("'{}'", e)
-                } else {
-                    format!("{}", e)
-                }
-
-            }).collect();
+            let ele: Vec<String> = x
+                .split(",")
+                .map(|e| {
+                    if as_type == "str" {
+                        format!("'{}'", e)
+                    } else {
+                        format!("{}", e)
+                    }
+                })
+                .collect();
 
             if ele.len() == 1 {
                 format!("{} = {}", &field, ele[0])
             } else {
                 format!("{} IN ({})", &field, ele.join(", "))
             }
-        },
-        None => {"".to_string()},
+        }
+        None => "".to_string(),
     };
 
     sql
 }
 
-
 fn construct_range_query(field: &str, item: Option<String>) -> String {
     let sql = match item {
         Some(x) => {
-            let ele: Vec<i32> = x.split(",").map(|e| {
-                e.parse().unwrap()
-            }).collect();
+            let ele: Vec<i32> = x.split(",").map(|e| e.parse().unwrap()).collect();
 
             if ele.len() == 1 {
                 format!("{} = {}", &field, ele[0])
@@ -45,16 +43,13 @@ fn construct_range_query(field: &str, item: Option<String>) -> String {
                 } else {
                     format!("{} BETWEEN {} AND {}", &field, a, b)
                 }
-
             }
-
-        },
-        None => {"".to_string()}
+        }
+        None => "".to_string(),
     };
 
     sql
 }
-
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct QueryData {
@@ -77,7 +72,7 @@ pub struct QueryData {
 }
 
 impl QueryData {
-    pub(crate) fn to_sql(&self) -> String{
+    pub(crate) fn to_sql(&self) -> String {
         let conditions = vec![
             construct_in_query("technology", self.technology.clone(), "str"),
             construct_in_query("species", self.species.clone(), "str"),
@@ -104,10 +99,9 @@ impl QueryData {
                         };
                         format!("has_cell_type = {}", v)
                     }
-                    None => ("".to_string())
+                    None => ("".to_string()),
                 }
-
-            }
+            },
         ];
 
         let mut query_params = vec![];
@@ -117,10 +111,12 @@ impl QueryData {
             }
         }
 
-        format!("SELECT data_id FROM data_records WHERE {};", query_params.join(" AND "))
+        format!(
+            "SELECT data_id FROM data_records WHERE {};",
+            query_params.join(" AND ")
+        )
     }
 }
-
 
 impl Display for QueryData {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
