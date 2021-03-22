@@ -10,17 +10,13 @@ class DataRecord(Base):
 
     data_id = Column(String, primary_key=True)
     technology = Column(String, index=True)
-    species = Column(String, index=True)
     tissue = Column(String, index=True)
     disease = Column(String, index=True)
     disease_subtype = Column(String, index=True)
-    markers = Column(ARRAY(String))
     molecular = Column(String, index=True)
     source_name = Column(String)
-    source_url = Column(ARRAY(String))
+    source_url = Column(String)
     journal = Column(String)
-    level_name = Column(ARRAY(String))
-    level_count = Column(ARRAY(Integer))
     year = Column(Integer, index=True)
     resolution = Column(Integer, index=True)
     cell_count = Column(Integer, index=True)
@@ -34,29 +30,41 @@ class DataStats(Base):
     data_id = Column(String, primary_key=True)
     cell_components = Column(String)
     cell_density = Column(String)
-    spatial_distribution = Column(String)
-    entropy_shannon = Column(String)
-    entropy_altieri = Column(String)
+    co_expression = Column(String)
+    cell_interaction = Column(String)
 
 
 class CellInfo(Base):
     __tablename__ = "cell_info"
 
-    cell_id = Column(String, primary_key=True)
-    cell_x = Column(Float)
-    cell_y = Column(Float)
-    cell_type = Column(String)
-    expression = Column(ARRAY(Float))
+    roi_id = Column(String, primary_key=True)
+    data_id = Column(String, index=True)
+    cell_x = Column(ARRAY(Float))
+    cell_y = Column(ARRAY(Float))
+    cell_type = Column(ARRAY(String))
+    cell_name = Column(ARRAY(Integer))
+    neighbor_one = Column(ARRAY(Integer))
+    neighbor_two = Column(ARRAY(Integer))
+
+
+class CellExp(Base):
+    __tablename__ = "cell_exp"
+
     roi_id = Column(String, index=True)
     data_id = Column(String, index=True)
+    markers = Column(String)
+    expression = Column(ARRAY(Float))
 
 
-class GroupLevel(Base):
-    __tablename__ = "group_level"
+class ROIInfo(Base):
+    __tablename__ = "roi_info"
 
     roi_id = Column(String, primary_key=True)
     data_id = Column(String, index=True)
-    levels_table = Column(String)
+    header = Column(ARRAY(String))
+    meta = Column(ARRAY(String))
+    shannon_entropy = Column(Float)
+    altieri_entropy = Column(Float)
 
 
 def init_db(engine):

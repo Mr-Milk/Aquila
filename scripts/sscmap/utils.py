@@ -2,17 +2,20 @@ import re
 from typing import List
 
 import pandas as pd
+from crossref.restful import Etiquette, Works
+
+info = Etiquette("baize", contact_email="yb97643@um.edu.mo")
 
 
 def get_data_id(text):
-    result = re.sub(r'[^\w]', "", text)
+    result = re.sub(r"[^\w]", "", text)
     if result != "":
         return result
     else:
         raise ValueError("Empty")
 
 
-def formalize_str(value):
+def cap_string(value):
     if isinstance(value, str):
         value = str(value).lower().capitalize()
     else:
@@ -20,59 +23,32 @@ def formalize_str(value):
     return value
 
 
-def formalize_uint(value):
+def up_string(value):
     if isinstance(value, str):
-        try:
-            value = float(value)
-        except TypeError:
-            raise TypeError(f"Expected a number, {value}")
-
-    elif isinstance(value, float):
-        if value < 0:
-            raise ValueError(f"Your input number is negative, {value}")
-        elif value.is_integer():
-            value = int(value)
-        else:
-            raise TypeError(f"Your input number has decimal, {value}")
-    elif isinstance(value, int):
-        if value < 0:
-            raise ValueError(f"Your input number is negative, {value}")
+        value = str(value).upper()
     else:
-        raise TypeError(f"Expected a number, {value}")
+        raise TypeError(f"Expected str, {value}")
     return value
 
 
-def formalize_list_uint(value):
-    if isinstance(value, List):
-        if len(value) == 0:
-            raise ValueError("Empty list")
-        new_value = []
-        for i in value:
-            i = formalize_uint(i)
-            new_value.append(i)
-        value = new_value
-    elif isinstance(value, (int, float)):
-        value = formalize_uint(value)
-    else:
-        raise TypeError("Expected a list of positive int")
-
-    return value
+def get_protein_ids(protein_names):
+    pass
 
 
-def formalize_list_str(value):
-    if isinstance(value, List):
-        if len(value) == 0:
-            raise ValueError("Empty list")
-        new_value = []
-        for i in value:
-            i = formalize_str(i)
-            new_value.append(i)
-        value = new_value
-    elif isinstance(value, str):
-        value = [value]
-    else:
-        raise TypeError("Expected a list of str")
-    return value
+def get_gene_ids(gene_names):
+    pass
+
+
+def get_doi_info(doi: str):
+    r = Works(etiquette=info)
+    result = r.doi(doi)
+    return dict(
+        doi=result["DOI"],
+        source_url=result["URL"],
+        journal=result["container-title"][0],
+        source_name=result["title"][0],
+        year=int(result["published-print"]["date-parts"][0][0]),
+    )
 
 
 def formalize_markers(value):
@@ -84,8 +60,8 @@ def formalize_markers(value):
     else:
         raise TypeError("Expected str")
 
-    value = [re.sub(r'\s', "-", i) for i in value]
-    value = [re.sub(r'_', "-", i) for i in value]
+    value = [re.sub(r"\s", "-", i) for i in value]
+    value = [re.sub(r"_", "-", i) for i in value]
     return value
 
 

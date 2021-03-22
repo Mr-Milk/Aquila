@@ -1,51 +1,59 @@
-use crate::db::DataRecords;
-use crate::schema::QueryData;
-use actix_web::{get, web, HttpResponse, Responder};
+use actix_web::{get, HttpResponse, Responder, web};
 use sqlx::PgPool;
 
-#[get("/data")]
+use crate::db::DataRecords;
+use crate::routes::response::{error_response, json_response};
+
+#[get("/data_ids")]
 async fn data(db_pool: web::Data<PgPool>) -> impl Responder {
-    println! {"Get /data"};
     let result = DataRecords::all_data_ids(db_pool.get_ref()).await;
     match result {
-        Ok(data_ids) => HttpResponse::Ok().json(data_ids),
-        _ => HttpResponse::BadRequest().body("Error"),
+        Ok(data_ids) => json_response(data_ids),
+        _ => error_response(),
     }
 }
 
-#[get("/data/query")]
-async fn query_data(selector: web::Query<QueryData>, db_pool: web::Data<PgPool>) -> impl Responder {
-    println!("Get /data/query {}", selector.clone());
-    let result = DataRecords::filter_data_ids(selector.clone(), db_pool.get_ref()).await;
+#[get("/dbstats")]
+async fn dbstats(db_pool: web::Data<PgPool>) -> impl Responder {
+    let result = DataRecords::dbstats(db_pool.get_ref()).await;
     match result {
-        Ok(data_ids) => HttpResponse::Ok().json(data_ids),
-        _ => HttpResponse::BadRequest().body("Error"),
+        Ok(stats) => json_response(stats),
+        _ => error_response(),
     }
 }
 
-#[get("/meta")]
-async fn meta(db_pool: web::Data<PgPool>) -> impl Responder {
-    println! {"Get /meta"};
-    let result = DataRecords::index_metas(db_pool.get_ref()).await;
+// #[get("/data/query")]
+// async fn query_data(selector: web::Query<QueryData>, db_pool: web::Data<PgPool>) -> impl Responder {
+//     println!("Get /data/query {}", selector.clone());
+//     let result = DataRecords::filter_data_ids(selector.clone(), db_pool.get_ref()).await;
+//     match result {
+//         Ok(data_ids) => HttpResponse::Ok().json(data_ids),
+//         _ => HttpResponse::BadRequest().body("Error"),
+//     }
+// }
+
+#[get("/records")]
+async fn records(db_pool: web::Data<PgPool>) -> impl Responder {
+    let result = DataRecords::all_records(db_pool.get_ref()).await;
     match result {
-        Ok(data_metas) => HttpResponse::Ok().json(data_metas),
-        _ => HttpResponse::BadRequest().body("Error"),
+        Ok(records) => json_response(records),
+        _ => error_response(),
     }
 }
 
-#[get("/meta/{data_id}")]
-async fn get_one_meta(data_id: web::Path<String>, db_pool: web::Data<PgPool>) -> impl Responder {
-    println!("Get /meta/{}", data_id.clone());
-    let result = DataRecords::one_meta(data_id.into_inner(), db_pool.get_ref()).await;
+#[get("/records/{data_id}")]
+async fn one_records(data_id: web::Path<String>, db_pool: web::Data<PgPool>) -> impl Responder {
+    let result = DataRecords::one_record(data_id.into_inner(), db_pool.get_ref()).await;
     match result {
-        Ok(datameta) => HttpResponse::Ok().json(datameta),
-        _ => HttpResponse::BadRequest().body("Error"),
+        Ok(record) => json_response(record),
+        _ => error_response(),
     }
 }
 
 pub fn init(cfg: &mut web::ServiceConfig) {
     cfg.service(data);
-    cfg.service(query_data);
-    cfg.service(meta);
-    cfg.service(get_one_meta);
+    cfg.service(dbstats);
+    // cfg.service(query_data);
+    cfg.service(records);
+    cfg.service(one_records);
 }

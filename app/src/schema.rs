@@ -1,6 +1,7 @@
-use serde::export::Formatter;
-use serde::Deserialize;
 use std::fmt::{Debug, Display, Result};
+
+use serde::Deserialize;
+use serde::export::Formatter;
 
 fn construct_in_query(field: &str, item: Option<String>, as_type: &str) -> String {
     let sql = match item {
@@ -54,12 +55,10 @@ fn construct_range_query(field: &str, item: Option<String>) -> String {
 #[derive(Deserialize, Clone, Debug)]
 pub struct QueryData {
     pub(crate) technology: Option<String>,
-    pub(crate) species: Option<String>,
     pub(crate) tissue: Option<String>,
     pub(crate) disease: Option<String>,
     pub(crate) sub_disease: Option<String>,
     pub(crate) molecular: Option<String>,
-    pub(crate) markers: Option<String>,
     pub(crate) year: Option<String>,
     pub(crate) resolution: Option<String>,
     pub(crate) cell_count: Option<String>,
@@ -75,12 +74,10 @@ impl QueryData {
     pub(crate) fn to_sql(&self) -> String {
         let conditions = vec![
             construct_in_query("technology", self.technology.clone(), "str"),
-            construct_in_query("species", self.species.clone(), "str"),
             construct_in_query("tissue", self.tissue.clone(), "str"),
             construct_in_query("disease", self.disease.clone(), "str"),
             construct_in_query("sub_disease", self.sub_disease.clone(), "str"),
             construct_in_query("molecular", self.molecular.clone(), "str"),
-            construct_in_query("markers", self.markers.clone(), "str"),
             construct_in_query("year", self.year.clone(), "int"),
             construct_in_query("resolution", self.resolution.clone(), "int"),
             construct_in_query("cell_count", self.cell_count.clone(), "int"),

@@ -1,36 +1,157 @@
 # API Document of Baize
 
+**API Root**: [api.baize.cheunglab.org]()
+
+
+
+**Get Database Statistic**
+
+**GET** ```/dbstats```
+Example: ```{"data_count": 10, "disease_count": 22, "tissue_count": 12}```
+
+
+
+**Get all the data_id**
+
+**GET** ```/data_ids```
+
+Example: ```["id 1", "id 2", ..., "id n"]```
+
+
+
+**Get the meta of a data**
+
+**GET** ```/records```: Get all
+
+**GET** ```/records/{data_id}```: Get one data
+
+```javascript
+{
+    "data_id": String,
+    "technology": String,
+    "species": String,
+    "disease": String,
+    "disease_subtype": String,
+    "molecular": String,
+    "source_url": Vec<String>,
+    "journal": String,
+    "year": i32,
+    "resolution": i32,
+    "cell_count": i32,
+    "marker_count": i32,
+    "has_cell_type": bool,
+}
 ```
-root: api.baize.com
 
-✔️GET /data
-get all the data_id
 
-['id1', 'id2', ...]
 
-✔GET /meta/{data_id}
-get the meta of a data
+**Get data statistics**
 
-DataMeta:
-{}
+**GET** ```/stats/cell_components/{data_id}```
 
-GET /stats/{type}/{data_id}
-get stats of a data
+```javascript
+{
+  "data_id": string,
+  "cell_types": ["type1", "type2", ..., "type n"],
+  "fraction": [0.1, 0.35, ...]
+}
+```
 
-json
 
-GET /roi/{data_id}
-get all roi_id and their levels of data
 
-GET /cell_info/{roi_id}
-get cell info, include [id, x, y, type, exp]
+**GET** ```/stats/cell_density/{data_id}```
+
+```javascript
+{
+  "data_id": string,
+	"cell_types": ["type1", "type2", ..., "type n"],
+  "density": [
+    [0.1, 0.2, ..., 0.6],
+    [0.4, 2.3, ..., 8.5],
+    ...
+  ]
+}
+```
+
+
+
+**GET** ```/stats/coexp/{data_id}```
+
+```javascript
+{
+	"data_id": string,
+	"markers": ["m1", "m2", ...],
+	"relationship": [(source, target, value), ...],
+	
+}
+```
+
+
+
+**GET** ```/stats/cci/{data_id}```
+
+```javascript
+{
+	"data_id": string,
+	"cell_types": ["c1", "c2", ...],
+	"relationship": [(source, target, value), ...]
+}
+```
+
+
+
+
+
+**Get ROI information**
+
+**GET** ```/roi/{data_id}```: Get all roi_id and their levels of data in a data
+
+```javascript
+{
+  "data_id": string,
+  "roi_ids": ["id 1", "id 2", ..., "id n"]
+  "levels_table": {
+    "columns": ["patient", "stage", "roi_id"],
+    "rows": [
+      ["patient 1", "stage 1", "id 1"],
+      ["patient 1", "stage 2", "id 2"],
+      ["patient 1", "stage 3", "id 3"],
+      ...
+    ]
+  }
+}
+```
+
+
+
+**GET** ```/cell_info/{roi_id}```
+
+```javascript
+{
+	"data_id":
+	"roi_id":
+	"shannon_entropy":
+	"altieri_entropy":
+	"cell_name": [id1, id2, ]
+	"cell_loc": [(x, y), ...],
+	"cell_type": ["type 1", ...],
+	"cell_exp": {
+		"markers": [],
+		"matrix": {
+			marker: [matrix...],
+		}
+	}
+	"cell_neighbors": [(source, target), ...]
+}
+```
+
+
 
 GET /data/query/?{}
 return a list of data_id
 
 GET /download/{data_id}
 download a .zip file of a data
-```
 
 
 

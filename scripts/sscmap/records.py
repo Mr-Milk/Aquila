@@ -1,51 +1,49 @@
 import os
 from ast import literal_eval
+from collections import Counter
 from pathlib import Path
 from typing import List, Optional, Union
 from uuid import uuid4
 from zipfile import ZipFile
 
 import pandas as pd
+import scanpy as sc
 import spatialtis as st
 import sqlalchemy
 import ujson
 from anndata import AnnData
 
-from .db import CellInfo, DataRecord, DataStats, GroupLevel, init_db
+from .db import CellExp, CellInfo, DataRecord, DataStats, ROIInfo, init_db
 from .meta import RecordMeta
 
 
 class Record:
-    # data_records
-    data_records_db: Optional[pd.DataFrame] = None
-    data_id: Optional[str] = None
+    # Database Table
+    DataRecord: Optional[pd.DataFrame] = None
+    DataStats: Optional[pd.DataFrame] = None
+    CellInfo: Optional[pd.DataFrame] = None
+    ROIInfo: Optional[pd.DataFrame] = None
+    CellExp: Optional[pd.DataFrame] = None
 
-    # data_stats
-    data_stats_db: Optional[pd.DataFrame] = None
+    # ROI Table
+    roi_meta: Optional[pd.DataFrame] = None
+    shannon_entropy_tb: Optional[pd.DataFrame] = None
+    altieri_entropy_tb: Optional[pd.DataFrame] = None
+
+    # Analysis Table
     cell_components_tb: Optional[pd.DataFrame] = None
     cell_density_tb: Optional[pd.DataFrame] = None
-    spatial_distribution_tb: Optional[pd.DataFrame] = None
-    entropy_shannon_tb: Optional[pd.DataFrame] = None
-    entropy_altieri_tb: Optional[pd.DataFrame] = None
+    co_expression_tb: Optional[pd.DataFrame] = None
+    cell_interaction_tb: Optional[pd.DataFrame] = None
 
-    # cell_info
-    cell_info_tb: Optional[pd.DataFrame] = None
-    cell_info_db: Optional[pd.DataFrame] = None
-
-    # cell_expression
-    cell_expression_tb: Optional[pd.DataFrame] = None
-
-    # group_level
-    levels_table: Optional[pd.DataFrame] = None
-    group_level_db: Optional[pd.DataFrame] = None
-
-    # state
+    # Misc
+    data_id: Optional[str] = None
     computed: Optional[bool] = None
+    meta: Optional[RecordMeta] = None
 
     def __init__(
         self,
         data: AnnData,
-        record_meta: RecordMeta,
         groups_keys: Optional[List[str]] = None,
         cell_type_key: Optional[str] = None,
         markers_key: Optional[str] = None,
@@ -56,6 +54,21 @@ class Record:
         engine: Optional[sqlalchemy.engine.Engine] = None,
         export: Union[Path, str, None] = None,
     ):
+        self.data = data.copy()
+        self.groups_keys = groups_keys
+        self.cell_type_key = cell_type_key
+        self.markers_key = markers_key
+        self.centroid_key = centroid_key
+        self.cell_x_key = cell_x_key
+        self.cell_y_key = cell_y_key
+        self.force = force
+
+        if self.cell_type_key is not None:
+            self.data.obs.rename(
+                columns={self.cell_type_key: "cell_type"}, inplace=True
+            )
+            self.cell_type_key = "cell_type"
+
         if engine is not None:
             init_db(engine)
             self.engine = engine
@@ -65,25 +78,103 @@ class Record:
                 export = Path(export)
             self.export = export
 
-        if cell_type_key is None:
-            record_meta.has_cell_type = False
-            self.computed = False
-        else:
-            record_meta.has_cell_type = True
-            self.computed = True
+    def ok(self, expand=5, export=None, static=False, zipped=True):
+        self.run_analysis(expand)
+        self.get_db_table()
+        self.to_static(export, static, zipped)
+        self.to_db()
 
-        data = data.copy()
-        cell_count = len(data)
-        cell_id = [str(uuid4()) for _ in range(cell_count)]
+    def set_meta(self, doi=None, data_id=None, **kwargs):
+        self.meta = RecordMeta(**kwargs).set_id(doi=doi, data_id=data_id)
+        self.data_id = self.meta.data_id
+        if self.cell_type_key is not None:
+            self.meta.has_cell_type = True
+        return self
+
+    def run_analysis(self, expand=5):
+        st.CONFIG.EXP_OBS = self.groups_keys
+        st.CONFIG.CENTROID_KEY = self.centroid_key
+        st.CONFIG.MARKER_KEY = self.markers_key
+        st.CONFIG.VERBOSE = True
+
+        sc.pp.filter_genes(self.data, min_cells=100)
+        sc.pp.normalize_total(self.data, target_sum=100)
+        sc.pp.log1p(self.data)
+        sc.pp.highly_variable_genes(self.data, min_mean=0.0125, min_disp=0.5)
+
+        self.meta.cell_count, self.meta.marker_count = self.data.shape
+        print(
+            f"Data record {self.meta.data_id} has {self.meta.cell_count} cells and "
+            f"{self.meta.marker_count} markers."
+        )
+
+        selected_markers = []
+        for m, hv in zip(
+            self.data.var[self.markers_key], self.data.var.highly_variable
+        ):
+            if hv:
+                selected_markers.append(m)
+
+        # iterative find neighbors until NN reach [4.5, 7)
+        while True:
+            st.find_neighbors(self.data, expand=expand, count=True)
+            neighbors_count = self.data.obs.cell_neighbors_count.mean()
+            if neighbors_count <= 4.5:
+                expand += 2
+            elif neighbors_count > 7:
+                expand -= 2
+            else:
+                break
+
+        self.co_expression_tb = st.spatial_co_expression(
+            self.data, selected_markers=selected_markers, corr_cutoff=0.7
+        ).result
+
+        if self.meta.has_cell_type:
+            st.CONFIG.CELL_TYPE_KEY = "cell_type"
+            self.cell_components_tb = st.cell_components(self.data).result
+            self.cell_density_tb = st.cell_density(self.data).result
+            self.shannon_entropy_tb = st.spatial_heterogeneity(
+                self.data, method="shannon"
+            ).result
+            self.altieri_entropy_tb = st.spatial_heterogeneity(
+                self.data, method="altieri"
+            ).result
+            self.cell_interaction_tb = st.neighborhood_analysis(
+                self.data, order=False
+            ).result
+
+            self.shannon_entropy_tb.rename(
+                columns={"heterogeneity": "shannon_entropy"}, inplace=True
+            )
+            self.altieri_entropy_tb.rename(
+                columns={"heterogeneity": "altieri_entropy"}, inplace=True
+            )
+
+        return self
+
+    def roi_id(self):
         roi_id = []
-        for n, df in data.obs.groupby(groups_keys):
+        for n, df in self.data.obs.groupby(self.groups_keys):
             uid = str(uuid4())
             roi_id += [uid for _ in range(len(df))]
 
-        data.obs["cell_id"] = cell_id
-        data.obs["roi_id"] = roi_id
-        if (cell_x_key is None) | (cell_y_key is None):
-            cent = data.obs[centroid_key].tolist()
+        self.data.obs["roi_id"] = roi_id
+        self.roi_meta = self.data.obs[["roi_id"] + self.groups_keys].drop_duplicates()
+        if self.meta.has_cell_type:
+            self.roi_meta = self.roi_meta.merge(
+                self.shannon_entropy_tb.merge(
+                    self.altieri_entropy_tb, on=self.groups_keys
+                ),
+                on=self.groups_keys,
+            )
+        else:
+            self.roi_meta["shannon_entropy"] = 0
+            self.roi_meta["altieri_entropy"] = 0
+
+    def cell_x_y(self):
+        if (self.cell_x_key is None) | (self.cell_y_key is None):
+            cent = self.data.obs[self.centroid_key].tolist()
             elem = cent[0]
             if isinstance(elem, str):
                 cent = [literal_eval(c) for c in cent]
@@ -91,125 +182,174 @@ class Record:
             for x, y in cent:
                 cell_x.append(x)
                 cell_y.append(y)
-            data.obs["cell_x"] = cell_x
-            data.obs["cell_y"] = cell_y
+            self.data.obs["cell_x"] = cell_x
+            self.data.obs["cell_y"] = cell_y
         else:
-            data.obs.rename(columns={cell_x_key: "cell_x", cell_y_key: "cell_y"})
-        data.obs.rename(columns={cell_type_key: "cell_type"})
+            self.data.obs.rename(
+                columns={self.cell_x_key: "cell_x", self.cell_y_key: "cell_y"}
+            )
 
-        self.data_id = record_meta.data_id
-        self.levels_table = data.obs[["roi_id"] + groups_keys].drop_duplicates()
-        self.cell_info_tb = data.obs[
-            ["cell_id", "cell_x", "cell_y", "cell_type", "roi_id"]
-        ]
+    def get_db_table(self):
+        self.roi_id()
+        self.cell_x_y()
+        # Handle statistics
+        cell_components_types = []
+        cell_components_data = []
 
-        markers = data.var[markers_key].tolist()
-        record_meta.markers = markers
-        self.cell_expression_tb = pd.DataFrame(data=data.X, columns=record_meta.markers)
-        self.cell_expression_tb.insert(0, "cell_id", cell_id)
+        cell_density_types = []
+        cell_density_data = []
 
-        record_meta.cell_count = cell_count
-        record_meta.level_name = groups_keys
-        record_meta.level_count = [
-            len(pd.unique(c)) for _, c in data.obs[groups_keys].iteritems()
-        ]
+        cci_types = []
+        cci_data = []
+        # Cell components
+        if self.meta.has_cell_type:
+            cell_components = (
+                self.cell_components_tb.groupby("type")
+                .sum()
+                .reset_index()[["type", "value"]]
+            )
+            cell_components_types = cell_components["type"].tolist()
+            cell_components_data = cell_components["value"].tolist()
+            # Cell density
+            for t, g in self.cell_density_tb.groupby("type"):
+                cell_density_types.append(t)
+                cell_density_data.append(list(g["value"]))
+            # Cell interaction
+            cci = self.cell_interaction_tb
+            cci_types = pd.unique([*cci["type1"].unique(), *cci["type2"].unique()])
+            for t, g in cci.groupby(["type1", "type2"]):
+                counts = {0: 0, 1: 0, -1: 0, **Counter(g["value"])}
+                roi_sum = sum(list(counts.values()))
+                if counts[1] > counts[-1]:
+                    value = counts[1] / roi_sum
+                else:
+                    value = counts[-1] / roi_sum
+                if value > 0:
+                    cci_data.append([*t, value])
+        # Co expression
+        co_exp = self.co_expression_tb
+        co_exp_markers = pd.unique(
+            [*co_exp["marker1"].unique(), *co_exp["marker2"].unique()]
+        )
+        co_exp_data = co_exp[["marker1", "marker2", "corr"]].to_numpy().tolist()
 
-        # make db
-        self.data_records_db = record_meta.to_tb(force=force)
+        # cell info
+        roi_id = []
+        data_id = []
+        cell_x = []
+        cell_y = []
+        cell_type = []
+        cell_name = []
+        neighbor_one = []
+        neighbor_two = []
 
-        self.cell_info_db = self.cell_info_tb.copy(deep=True)
-        self.cell_info_db["data_id"] = [self.data_id for _ in range(cell_count)]
-        self.cell_info_db.insert(4, "expression", data.X.tolist())
+        # cell exp
+        data_id_exp = []
+        roi_id_exp = []
+        markers = []
+        expression = []
 
-        self.group_level_db = pd.DataFrame(
+        for n, roi in self.data.obs.groupby("roi_id"):
+            # cell info
+            roi_id.append(n)
+            data_id.append(self.data_id)
+            cell_x.append(roi["cell_x"].tolist())
+            cell_y.append(roi["cell_y"].tolist())
+            cell_name.append(roi[st.CONFIG.neighbors_ix_key].tolist())
+            neigh_ones = []
+            neigh_twos = []
+            for cent, neigh in zip(
+                roi[st.CONFIG.neighbors_ix_key], roi[st.CONFIG.NEIGHBORS_KEY]
+            ):
+                for c in neigh:
+                    if c > cent:
+                        neigh_ones.append(cent)
+                        neigh_twos.append(c)
+            neighbor_one.append(neigh_ones)
+            neighbor_two.append(neigh_twos)
+            if self.meta.has_cell_type:
+                cell_type.append(roi["cell_type"].tolist())
+            else:
+                cell_type.append([])
+
+            # cell exp
+            roi_id_exp += [self.data_id for _ in range(len(roi))]
+            roi_id_exp += [n for n in range(len(roi))]
+            expression += self.data[self.data.obs["roi_id"] == n].X.copy().tolist()
+            markers += self.data.var[self.markers_key].tolist()
+
+        self.DataRecord = self.meta.to_tb()
+        self.DataStats = pd.DataFrame(
             {
-                "roi_id": self.levels_table["roi_id"],
-                "data_id": [self.data_id for _ in range(len(self.levels_table))],
-                "levels_table": self.levels_table.to_json(
-                    orient="records", force_ascii=False
+                "data_id": self.data_id,
+                "cell_components": ujson.dumps(
+                    {
+                        "data_id": self.data_id,
+                        "cell_types": cell_components_types,
+                        "components": cell_components_data,
+                    }
                 ),
+                "cell_density": ujson.dumps(
+                    {
+                        "data_id": self.data_id,
+                        "cell_types": cell_density_types,
+                        "density": cell_density_data,
+                    }
+                ),
+                "co_expression": ujson.dumps(
+                    {
+                        "data_id": self.data_id,
+                        "markers": co_exp_markers,
+                        "relationship": co_exp_data,
+                    }
+                ),
+                "cell_interaction": ujson.dumps(
+                    {
+                        "data_id": self.data_id,
+                        "cell_types": cci_types,
+                        "relationship": cci_data,
+                    }
+                ),
+            },
+            index=[0],
+        )
+        self.CellInfo = pd.DataFrame(
+            {
+                "roi_id": roi_id,
+                "data_id": data_id,
+                "cell_x": cell_x,
+                "cell_y": cell_y,
+                "cell_type": cell_type,
+                "cell_name": cell_name,
+                "neighbor_one": neighbor_one,
+                "neighbor_two": neighbor_two,
+            }
+        )
+        self.CellExp = pd.DataFrame(
+            {
+                "roi_id": roi_id_exp,
+                "data_id": data_id_exp,
+                "markers": markers,
+                "expression": expression,
+            }
+        )
+        self.ROIInfo = pd.DataFrame(
+            {
+                "roi_id": self.roi_meta["roi_id"].tolist(),
+                "data_id": [self.data_id for _ in range(len(self.roi_meta))],
+                "header": [
+                    self.roi_meta.columns.tolist()[0:-2]
+                    for _ in range(len(self.roi_meta))
+                ],
+                "meta": [
+                    i for i in self.roi_meta[self.groups_keys].to_numpy().tolist()
+                ],
+                "shannon_entropy": self.roi_meta["shannon_entropy"].tolist(),
+                "altieri_entropy": self.roi_meta["altieri_entropy"].tolist(),
             }
         )
 
-        if self.computed:
-            st.CONFIG.EXP_OBS = groups_keys
-            st.CONFIG.CELL_TYPE_KEY = cell_type_key
-            st.CONFIG.CENTROID_KEY = centroid_key
-            st.CONFIG.MULTI_PROCESSING = True
-            st.CONFIG.VERBOSE = False
-            self.cell_components_tb = (
-                st.cell_components(data, export=False, return_df=True)
-                .reset_index(groups_keys)
-                .reset_index(drop=True)
-            )
-            self.cell_density_tb = (
-                st.cell_density(data, export=False, return_df=True)
-                .reset_index(groups_keys)
-                .reset_index(drop=True)
-            )
-            self.spatial_distribution_tb = (
-                st.spatial_distribution(data, export=False, return_df=True)
-                .reset_index(groups_keys)
-                .reset_index(drop=True)
-            )
-            self.entropy_shannon_tb = (
-                st.spatial_heterogeneity(
-                    data, method="shannon", export=False, return_df=True
-                )
-                .reset_index(groups_keys)
-                .reset_index(drop=True)
-            )
-            self.entropy_altieri_tb = (
-                st.spatial_heterogeneity(
-                    data, method="altieri", export=False, return_df=True
-                )
-                .reset_index(groups_keys)
-                .reset_index(drop=True)
-            )
-
-            self.data_stats_db = pd.DataFrame(
-                {
-                    "data_id": [self.data_id],
-                    "cell_components": [
-                        self.cell_components_tb.to_json(
-                            orient="records", force_ascii=False
-                        )
-                    ],
-                    "cell_density": [
-                        self.cell_density_tb.to_json(
-                            orient="records", force_ascii=False
-                        )
-                    ],
-                    "spatial_distribution": [
-                        self.spatial_distribution_tb.to_json(
-                            orient="records", force_ascii=False
-                        )
-                    ],
-                    "entropy_shannon": [
-                        self.entropy_shannon_tb.to_json(
-                            orient="records", force_ascii=False
-                        )
-                    ],
-                    "entropy_altieri": [
-                        self.entropy_altieri_tb.to_json(
-                            orient="records", force_ascii=False
-                        )
-                    ],
-                }
-            )
-        else:
-            self.data_stats_db = pd.DataFrame(
-                {
-                    "data_id": [self.data_id],
-                    "cell_components": [""],
-                    "cell_density": [""],
-                    "spatial_distribution": [""],
-                    "entropy_shannon": [""],
-                    "entropy_altieri": [""],
-                }
-            )
-
-    def to_static(self, export=None, static=True, zipped=True):
+    def to_static(self, export=None, static=False, zipped=True):
         if export is not None:
             if isinstance(export, str):
                 export = Path(export)
@@ -224,57 +364,29 @@ class Record:
         data_meta_path = export / "meta.txt"
         cell_info_path = export / "cell_info.txt"
         cell_expression_path = export / "cell_expression.txt"
-        group_level_path = export / "group_level.txt"
-        data_tables = [
-            data_meta_path,
-            cell_info_path,
-            cell_expression_path,
-            group_level_path,
-        ]
+        # records
+        self.DataRecord.to_csv(data_meta_path, sep="\t", index=False)
+        # Meta, X, Y, and cell types
+        if self.meta.has_cell_type:
+            columns = ["cell_type", "cell_x", "cell_y", *self.groups_keys]
+        else:
+            columns = ["cell_x", "cell_y", *self.groups_keys]
+        self.data.obs[columns].to_csv(cell_info_path, sep="\t", index=False)
+        # exp
+        pd.DataFrame(columns=self.data.var[self.markers_key], data=self.data.X).to_csv(
+            cell_expression_path, sep="\t", index=False
+        )
 
-        self.data_records_db.to_csv(data_meta_path, sep="\t", index=False)
-        self.cell_info_tb.to_csv(cell_info_path, sep="\t", index=False)
-        self.cell_expression_tb.to_csv(cell_expression_path, sep="\t", index=False)
-        self.levels_table.to_csv(group_level_path, sep="\t", index=False)
-
-        computed_dir = export / "computed"
-        cell_components_path = computed_dir / "cell_components.txt"
-        cell_density_path = computed_dir / "cell_density.txt"
-        spatial_distribution_path = computed_dir / "spatial_distribution.txt"
-        entropy_shannon_path = computed_dir / "entropy_shannon.txt"
-        entropy_altieri_path = computed_dir / "entropy_altieri.txt"
-        computed_tables = [
-            cell_components_path,
-            cell_density_path,
-            spatial_distribution_path,
-            entropy_shannon_path,
-            entropy_altieri_path,
-        ]
-        if self.computed:
-            try:
-                os.mkdir(computed_dir)
-            except FileExistsError:
-                pass
-            self.cell_components_tb.to_csv(cell_components_path, sep="\t", index=False)
-            self.cell_density_tb.to_csv(cell_density_path, sep="\t", index=False)
-            self.spatial_distribution_tb.to_csv(
-                spatial_distribution_path, sep="\t", index=False
-            )
-            self.entropy_shannon_tb.to_csv(entropy_shannon_path, sep="\t", index=False)
-            self.entropy_altieri_tb.to_csv(entropy_altieri_path, sep="\t", index=False)
-
+        data_tables = [data_meta_path, cell_info_path, cell_expression_path]
         if zipped:
             with ZipFile(export_zip, "w") as file:
                 for t in data_tables:
                     file.write(t, Path("/".join(t.parts[-2:])))
-                if self.computed:
-                    for t in computed_tables:
-                        file.write(t, Path("/".join(t.parts[-3:])))
 
         if not static:
             try:
                 os.remove(export)
-            except FileNotFoundError:
+            except (FileNotFoundError, PermissionError):
                 pass
 
     def to_db(self, engine=None):
@@ -283,22 +395,16 @@ class Record:
             self.engine = engine
         engine = self.engine
 
-        self.data_records_db.to_sql(
-            DataRecord.__tablename__, engine, if_exists="append", index=False
-        )
-        self.data_stats_db.to_sql(
-            DataStats.__tablename__, engine, if_exists="append", index=False
-        )
-        self.cell_info_db.to_sql(
-            CellInfo.__tablename__, engine, if_exists="append", index=False
-        )
-        self.group_level_db.to_sql(
-            GroupLevel.__tablename__, engine, if_exists="append", index=False
-        )
+        insert_policy = dict(if_exists="append", index=False)
+
+        self.DataRecord.to_sql(DataRecord.__tablename__, engine, **insert_policy)
+        self.DataStats.to_sql(DataStats.__tablename__, engine, **insert_policy)
+        self.CellInfo.to_sql(CellInfo.__tablename__, engine, **insert_policy)
+        self.ROIInfo.to_sql(ROIInfo.__tablename__, engine, **insert_policy)
 
     def drop_from_db(self, data_id=None):
         if data_id is None:
             data_id = self.data_id
-        all_tables = [DataRecord, DataStats, CellInfo, GroupLevel]
-        for t in all_tables:
+        tables = [DataRecord, DataStats, CellInfo, ROIInfo]
+        for t in tables:
             self.engine.execute(sqlalchemy.delete(t).where(data_id == data_id))

@@ -1,15 +1,15 @@
+use actix_files as fs;
+use actix_web::{App, get, HttpResponse, HttpServer, Responder};
+use actix_web::middleware::{Logger, DefaultHeaders};
+use env_logger::Env;
+use anyhow::Result;
+use dotenv::dotenv;
+use sqlx::postgres::PgPoolOptions;
+
 mod config;
 mod db;
 mod routes;
 mod schema;
-
-use actix_files as fs;
-use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
-use anyhow::Result;
-use db::DataRecords;
-use dotenv::dotenv;
-use sqlx::postgres::PgPoolOptions;
-use sqlx::PgPool;
 
 #[get("/")]
 async fn hello() -> impl Responder {
@@ -19,6 +19,10 @@ async fn hello() -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> Result<()> {
+    env_logger::Builder::from_env(
+        Env::default().default_filter_or("info")
+    ).init();
+
     dotenv().ok();
 
     let config = crate::config::Config::from_env().unwrap();
@@ -29,12 +33,17 @@ async fn main() -> Result<()> {
 
     let mut server = HttpServer::new(move || {
         App::new()
+            .wrap(Logger::default())
+            .wrap(DefaultHeaders::new()
+                .header("Access-Control-Allow-Origin", "*")
+                .header("Access-Control-Allow-Credentials", "true"))
             .data(db_pool.clone())
             .service(hello)
             .service(fs::Files::new("/static", "./").show_files_listing())
             .configure(routes::data_records_init)
             .configure(routes::data_stats_init)
             .configure(routes::roi_info_init)
+            // .configure(routes::cell_info_init)
     })
     .bind(format!("{}:{}", config.host, config.port))?;
 

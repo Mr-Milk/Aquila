@@ -7,6 +7,7 @@ pub struct Config {
     pub port: String,
     pub database_url: String,
     pub max_connections: u32,
+    // pub serve_statics: String,
 }
 
 impl Config {

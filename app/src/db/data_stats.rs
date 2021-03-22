@@ -1,18 +1,17 @@
-use crate::schema::QueryData;
-use anyhow::{Error, Result};
-use serde::{Deserialize, Serialize};
-use serde_json::{from_str, Map, Value};
-use sqlx::{FromRow, PgPool, Postgres, Row};
 use std::fmt::Debug;
+
+use anyhow::Result;
+use serde::{Deserialize, Serialize};
+use sqlx::{FromRow, PgPool, Row};
+use serde_json::{from_str, Map, Value};
 
 #[derive(Serialize, Deserialize, FromRow, Debug)]
 pub struct DataStats {
     data_id: String,
     cell_components: String,
     cell_density: String,
-    spatial_distribution: String,
-    entropy_shannon: String,
-    entropy_altieri: String,
+    co_expression: String,
+    cell_interaction: String,
 }
 
 impl DataStats {
@@ -30,9 +29,8 @@ impl DataStats {
             data_id: stats.data_id,
             cell_components: from_str(&*stats.cell_components).unwrap(),
             cell_density: from_str(&*stats.cell_density).unwrap(),
-            spatial_distribution: from_str(&*stats.spatial_distribution).unwrap(),
-            entropy_shannon: from_str(&*stats.entropy_shannon).unwrap(),
-            entropy_altieri: from_str(&*stats.entropy_altieri).unwrap(),
+            co_expression: from_str(&*stats.co_expression).unwrap(),
+            cell_interaction: from_str(&*stats.cell_interaction).unwrap(),
         };
 
         Ok(response)
@@ -42,9 +40,8 @@ impl DataStats {
 #[derive(Serialize, Deserialize, FromRow, Debug)]
 pub struct DataStatsResponse {
     data_id: String,
-    cell_components: Vec<Map<String, Value>>,
-    cell_density: Vec<Map<String, Value>>,
-    spatial_distribution: Vec<Map<String, Value>>,
-    entropy_shannon: Vec<Map<String, Value>>,
-    entropy_altieri: Vec<Map<String, Value>>,
+    cell_components: Map<String, Value>,
+    cell_density: Map<String, Value>,
+    co_expression: Map<String, Value>,
+    cell_interaction: Map<String, Value>,
 }
