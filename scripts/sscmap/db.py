@@ -45,14 +45,15 @@ class CellInfo(Base):
     cell_name = Column(ARRAY(Integer))
     neighbor_one = Column(ARRAY(Integer))
     neighbor_two = Column(ARRAY(Integer))
+    markers = Column(ARRAY(String))
 
 
 class CellExp(Base):
     __tablename__ = "cell_exp"
 
+    id = Column(Integer, primary_key=True)
     roi_id = Column(String, index=True)
     data_id = Column(String, index=True)
-    markers = Column(String)
     expression = Column(ARRAY(Float))
 
 

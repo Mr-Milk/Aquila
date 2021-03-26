@@ -1,3 +1,4 @@
+import logging
 import os
 from ast import literal_eval
 from collections import Counter
@@ -98,6 +99,12 @@ class Record:
         st.CONFIG.VERBOSE = True
 
         sc.pp.filter_genes(self.data, min_cells=100)
+        # To eliminate the negative value, we need to transform all the data to positive
+        # To preserve the distribution, we scale everything to (0, 1)
+        if self.meta.molecular.name == "Protein":
+            self.data.X = (self.data.X - self.data.X.min()) / (
+                self.data.X.max() - self.data.X.min()
+            )
         sc.pp.normalize_total(self.data, target_sum=100)
         sc.pp.log1p(self.data)
         sc.pp.highly_variable_genes(self.data, min_mean=0.0125, min_disp=0.5)
@@ -127,7 +134,7 @@ class Record:
                 break
 
         self.co_expression_tb = st.spatial_co_expression(
-            self.data, selected_markers=selected_markers, corr_cutoff=0.7
+            self.data, selected_markers=selected_markers, corr_cutoff=0.5
         ).result
 
         if self.meta.has_cell_type:
@@ -271,12 +278,12 @@ class Record:
                 cell_type.append(roi["cell_type"].tolist())
             else:
                 cell_type.append([])
+            markers.append(self.data.var[self.markers_key].tolist())
 
             # cell exp
-            roi_id_exp += [self.data_id for _ in range(len(roi))]
-            roi_id_exp += [n for n in range(len(roi))]
+            data_id_exp += [self.data_id for _ in range(len(roi))]
+            roi_id_exp += [n for _ in range(len(roi))]
             expression += self.data[self.data.obs["roi_id"] == n].X.copy().tolist()
-            markers += self.data.var[self.markers_key].tolist()
 
         self.DataRecord = self.meta.to_tb()
         self.DataStats = pd.DataFrame(
@@ -323,15 +330,11 @@ class Record:
                 "cell_name": cell_name,
                 "neighbor_one": neighbor_one,
                 "neighbor_two": neighbor_two,
+                "markers": markers,
             }
         )
         self.CellExp = pd.DataFrame(
-            {
-                "roi_id": roi_id_exp,
-                "data_id": data_id_exp,
-                "markers": markers,
-                "expression": expression,
-            }
+            {"roi_id": roi_id_exp, "data_id": data_id_exp, "expression": expression,}
         )
         self.ROIInfo = pd.DataFrame(
             {
@@ -342,7 +345,10 @@ class Record:
                     for _ in range(len(self.roi_meta))
                 ],
                 "meta": [
-                    i for i in self.roi_meta[self.groups_keys].to_numpy().tolist()
+                    i
+                    for i in self.roi_meta[["roi_id"] + self.groups_keys]
+                    .to_numpy()
+                    .tolist()
                 ],
                 "shannon_entropy": self.roi_meta["shannon_entropy"].tolist(),
                 "altieri_entropy": self.roi_meta["altieri_entropy"].tolist(),
@@ -401,10 +407,11 @@ class Record:
         self.DataStats.to_sql(DataStats.__tablename__, engine, **insert_policy)
         self.CellInfo.to_sql(CellInfo.__tablename__, engine, **insert_policy)
         self.ROIInfo.to_sql(ROIInfo.__tablename__, engine, **insert_policy)
+        self.CellExp.to_sql(CellExp.__tablename__, engine, **insert_policy)
 
     def drop_from_db(self, data_id=None):
         if data_id is None:
             data_id = self.data_id
-        tables = [DataRecord, DataStats, CellInfo, ROIInfo]
+        tables = [DataRecord, DataStats, CellInfo, ROIInfo, CellExp]
         for t in tables:
             self.engine.execute(sqlalchemy.delete(t).where(data_id == data_id))

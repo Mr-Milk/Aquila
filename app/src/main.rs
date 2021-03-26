@@ -43,7 +43,7 @@ async fn main() -> Result<()> {
             .configure(routes::data_records_init)
             .configure(routes::data_stats_init)
             .configure(routes::roi_info_init)
-            // .configure(routes::cell_info_init)
+            .configure(routes::cell_info_init)
     })
     .bind(format!("{}:{}", config.host, config.port))?;
 

@@ -11,7 +11,7 @@ async fn cell_info(roi_id: web::Path<String>, db_pool: web::Data<PgPool>) -> imp
     let result = CellInfo::get_cell_info(roi_id.into_inner(), db_pool.get_ref()).await;
     match result {
         Ok(info) => json_response(info),
-        _ => error_response(),
+        Err(e) => error_response(e),
     }
 }
 

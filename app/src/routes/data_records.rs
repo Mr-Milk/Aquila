@@ -9,7 +9,7 @@ async fn data(db_pool: web::Data<PgPool>) -> impl Responder {
     let result = DataRecords::all_data_ids(db_pool.get_ref()).await;
     match result {
         Ok(data_ids) => json_response(data_ids),
-        _ => error_response(),
+        Err(e) => error_response(e),
     }
 }
 
@@ -18,7 +18,7 @@ async fn dbstats(db_pool: web::Data<PgPool>) -> impl Responder {
     let result = DataRecords::dbstats(db_pool.get_ref()).await;
     match result {
         Ok(stats) => json_response(stats),
-        _ => error_response(),
+        Err(e) => error_response(e),
     }
 }
 
@@ -36,8 +36,8 @@ async fn dbstats(db_pool: web::Data<PgPool>) -> impl Responder {
 async fn records(db_pool: web::Data<PgPool>) -> impl Responder {
     let result = DataRecords::all_records(db_pool.get_ref()).await;
     match result {
-        Ok(records) => json_response(records),
-        _ => error_response(),
+        Ok(records) => HttpResponse::Ok().json(records),
+        Err(e) => error_response(e),
     }
 }
 
@@ -46,7 +46,7 @@ async fn one_records(data_id: web::Path<String>, db_pool: web::Data<PgPool>) -> 
     let result = DataRecords::one_record(data_id.into_inner(), db_pool.get_ref()).await;
     match result {
         Ok(record) => json_response(record),
-        _ => error_response(),
+        Err(e) => error_response(e),
     }
 }
 

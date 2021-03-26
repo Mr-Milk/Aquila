@@ -109,16 +109,16 @@ Example: ```["id 1", "id 2", ..., "id n"]```
 ```javascript
 {
   "data_id": string,
-  "roi_ids": ["id 1", "id 2", ..., "id n"]
-  "levels_table": {
-    "columns": ["patient", "stage", "roi_id"],
-    "rows": [
-      ["patient 1", "stage 1", "id 1"],
+  "roi_ids": ["id 1", "id 2", ..., "id n"]，
+  "shannon_entropy":
+	"altieri_entropy":
+  "header": ["roi_id", "patient", "stage", ],
+  "meta": [
+      [ "id 1", "patient 1", "stage 1",],
       ["patient 1", "stage 2", "id 2"],
       ["patient 1", "stage 3", "id 3"],
       ...
     ]
-  }
 }
 ```
 
@@ -130,8 +130,6 @@ Example: ```["id 1", "id 2", ..., "id n"]```
 {
 	"data_id":
 	"roi_id":
-	"shannon_entropy":
-	"altieri_entropy":
 	"cell_name": [id1, id2, ]
 	"cell_loc": [(x, y), ...],
 	"cell_type": ["type 1", ...],

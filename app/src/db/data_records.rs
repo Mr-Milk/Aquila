@@ -13,7 +13,7 @@ pub struct DataRecords {
     disease_subtype: String,
     molecular: String,
     source_name: String,
-    source_url: Vec<String>,
+    source_url: String,
     journal: String,
     year: i32,
     resolution: i32,
