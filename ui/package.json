@@ -1,0 +1,25 @@
+{
+  "name": "ui",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@material-ui/core": "^4.11.3",
+    "@material-ui/icons": "^4.11.2",
+    "@material-ui/lab": "^4.0.0-alpha.57",
+    "babel-plugin-styled-components": "^1.12.0",
+    "echarts": "^5.0.2",
+    "echarts-for-react": "^3.0.1",
+    "mathjs": "^9.3.0",
+    "mui-datatables": "^3.7.6",
+    "next": "10.0.9",
+    "prettier": "^2.2.1",
+    "react": "17.0.1",
+    "react-dom": "17.0.1",
+    "swr": "^0.5.4"
+  }
+}
