@@ -1,4 +1,4 @@
-import Layout from "./layout";
+import Layout from "../components/layout";
 import DBStats from "../components/DBStats";
 import Typography from "@material-ui/core/Typography";
 import { makeStyles } from "@material-ui/core/styles";

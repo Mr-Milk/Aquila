@@ -61,7 +61,7 @@ export default function DataRecordsBox(props) {
         {title}
       </Typography>
 
-      <Typography variant="body1" className={classes.pb}>
+      <Typography variant="body1" className={classes.pb} component="div">
         <ItemTitle>Title:</ItemTitle> {article}{" "}
         <IconButton
           href={article_url}
@@ -73,17 +73,17 @@ export default function DataRecordsBox(props) {
         </IconButton>
       </Typography>
 
-      <Typography variant="body1" className={classes.pb}>
+      <Typography variant="body1" className={classes.pb} component="div">
         <ItemTitle>Technology:</ItemTitle>
         <TechChip label={technology} />
       </Typography>
 
-      <Typography variant="body1" className={classes.pb}>
+      <Typography variant="body1" className={classes.pb} component="div">
         <ItemTitle>Molecular:</ItemTitle>
         {molecular}
       </Typography>
 
-      <Typography variant="body1" className={classes.pb}>
+      <Typography variant="body1" className={classes.pb} component="div">
         <ItemTitle>Cells:</ItemTitle>
         {cell_count}
       </Typography>

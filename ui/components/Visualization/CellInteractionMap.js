@@ -1,34 +1,33 @@
 import EChartsReact from "echarts-for-react";
 import { sort } from "mathjs";
+import assignColor from "./assignColors";
 
-function assign_colors(colors, arr) {
-  const cut = colors.length;
-  const bin = 2 / cut;
-  let ranges = {};
-  let start = -1;
-  colors.map((c) => {
-    ranges[c] = [start, start + bin];
-    start += bin;
-  });
-  let colors_arr = [];
-  arr.map((a) => {
-    if (a === 1) {
-      colors_arr.push(colors.slice(-1)[0]);
-    } else {
-      Object.keys(ranges).forEach((k) => {
-        let r = ranges[k];
-        if (a >= r[0] && a < r[1]) {
-          colors_arr.push(k);
-        }
-      });
-    }
-  });
-
-  return colors_arr;
-}
+// Palette name: LaJolla_20
+const color_pool = [
+  "#FFFFCC",
+  "#FEF7B5",
+  "#FCED9C",
+  "#F9E184",
+  "#F5D06C",
+  "#F1BF5D",
+  "#EDAD56",
+  "#EA9D53",
+  "#E68E52",
+  "#E17D50",
+  "#DA6C4E",
+  "#CA5B4B",
+  "#B54D46",
+  "#9D4440",
+  "#843D37",
+  "#6E362D",
+  "#562F21",
+  "#412817",
+  "#2B210D",
+  "#1A1A01",
+];
 
 export default function CellInteractionMap(props) {
-  const data = props.data;
+  const { data, ...leftProps } = props;
   const cell_types = data["cell_types"];
   const relationship = data["relationship"];
 
@@ -37,21 +36,11 @@ export default function CellInteractionMap(props) {
     nodes.push({ name: c });
   });
 
-  const color_pool = [
-    "#F3E79B",
-    "#FAC484",
-    "#F8A07E",
-    "#EB7F86",
-    "#CE6693",
-    "#A059A0",
-    "#5C53A5",
-  ];
-
   const values = [];
   relationship.map((i) => {
     values.push(i[2]);
   });
-  let colors = assign_colors(color_pool, values);
+  let colors = assignColor(color_pool, values, -1, 1);
 
   const links = [];
   relationship.map((i, ix) => {
@@ -109,6 +98,10 @@ export default function CellInteractionMap(props) {
   };
 
   return (
-    <EChartsReact option={option} style={{ width: "650px", height: "500px" }} />
+    <EChartsReact
+      option={option}
+      style={{ width: "550px", height: "400px" }}
+      {...leftProps}
+    />
   );
 }

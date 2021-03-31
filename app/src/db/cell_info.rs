@@ -18,13 +18,12 @@ pub struct CellInfo {
     neighbor_one: Vec<i32>,
     neighbor_two: Vec<i32>,
     markers: Vec<String>,
-    matrix: HashMap<String, Vec<f64>>,
 }
 
 impl CellInfo {
     pub async fn get_cell_info(roi_id: String, pool: &PgPool) -> Result<CellInfo> {
 
-        let info = sqlx::query(
+        let info: CellInfo = sqlx::query_as(
             r#"
             SELECT * FROM cell_info WHERE roi_id = $1;
             "#,
@@ -33,36 +32,34 @@ impl CellInfo {
             .fetch_one(pool)
             .await?;
 
-        let exp = sqlx::query(
-            r#"
-            SELECT * FROM cell_exp WHERE roi_id = $1;
-            "#,
-        ).bind(roi_id)
-            .fetch_all(pool)
-            .await?;
-
-        let markers: Vec<String> = info.get(8);
-        let mut matrix: HashMap<String, Vec<f64>> = markers
-            .iter()
-            .enumerate()
-            .map(|(i, x)| {
-                (x.into(), exp[i].get(3))
-            }).collect();
-
-        let cell_info = CellInfo {
-            roi_id: info.get(0),
-            data_id: info.get(1),
-            cell_x: info.get(2),
-            cell_y: info.get(3),
-            cell_type: info.get(4),
-            cell_name: info.get(5),
-            neighbor_one: info.get(6),
-            neighbor_two: info.get(7),
-            markers,
-            matrix
-        };
-
-        Ok(cell_info)
+        Ok(info)
     }
 
+}
+
+
+#[derive(Serialize, Deserialize, FromRow, Debug)]
+pub struct CellExp {
+    roi_id: String,
+    data_id: String,
+    marker: String,
+    expression: Vec<f64>,
+}
+
+impl CellExp {
+    pub async fn get_roi_exp(roi_id: String, marker: String, pool: &PgPool) -> Result<CellExp> {
+        println!("before query");
+        let exp: CellExp = sqlx::query_as(
+            r#"
+            SELECT * FROM cell_exp WHERE
+            roi_id = $1 AND marker = $2;
+            "#
+        )
+            .bind(roi_id)
+            .bind(marker)
+            .fetch_one(pool)
+            .await?;
+
+        Ok(exp)
+    }
 }

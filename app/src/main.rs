@@ -13,8 +13,7 @@ mod schema;
 
 #[get("/")]
 async fn hello() -> impl Responder {
-    println! {"Get /index"};
-    HttpResponse::Ok().body("Hello world!")
+    HttpResponse::Ok().body("Hi! This is the API of Baize: The spatial pathology database")
 }
 
 #[actix_web::main]
@@ -39,7 +38,7 @@ async fn main() -> Result<()> {
                 .header("Access-Control-Allow-Credentials", "true"))
             .data(db_pool.clone())
             .service(hello)
-            .service(fs::Files::new("/static", "./").show_files_listing())
+            .service(fs::Files::new("/static", "../scripts/data").show_files_listing())
             .configure(routes::data_records_init)
             .configure(routes::data_stats_init)
             .configure(routes::roi_info_init)

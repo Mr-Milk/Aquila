@@ -2,6 +2,8 @@ import React from "react";
 import MUIDataTable from "mui-datatables";
 import Skeleton from "@material-ui/lab/Skeleton";
 import Link from "next/link";
+import Visibility from "@material-ui/icons/Visibility";
+import GetApp from "@material-ui/icons/GetApp";
 import Launch from "@material-ui/icons/Launch";
 import LinkIcon from "@material-ui/icons/Link";
 import { useRouter } from "next/router";
@@ -47,6 +49,10 @@ export default function RecordsTable() {
     );
   }
 
+  data.map((d) => {
+    d.download = `/static/${d.data_id}`;
+  });
+
   const columns = [
     {
       name: "molecular",
@@ -71,23 +77,37 @@ export default function RecordsTable() {
     {
       name: "year",
       label: "Year",
+      options: {
+        filter: false,
+      },
     },
     {
       name: "resolution",
       label: "Resolution",
+      options: {
+        filter: false,
+      },
     },
     {
       name: "cell_count",
       label: "Cells",
+      options: {
+        filter: false,
+      },
     },
     {
       name: "marker_count",
       label: "Markers",
+      options: {
+        filter: false,
+      },
     },
     {
       name: "source_url",
       label: "Link",
       options: {
+        sort: false,
+        filter: false,
         customBodyRender: (value) => {
           return (
             <IconButton
@@ -103,19 +123,42 @@ export default function RecordsTable() {
       },
     },
     {
+      name: "download",
+      label: "Download",
+      options: {
+        sort: false,
+        filter: false,
+        customBodyRender: (value) => {
+          return (
+            <IconButton
+              color="primary"
+              href={value}
+              rel="noreferrer noopener"
+              download
+            >
+              <GetApp />
+            </IconButton>
+          );
+        },
+      },
+    },
+    {
       name: "data_id",
       label: "View",
       options: {
+        sort: false,
+        filter: false,
         customBodyRender: (value) => {
           return (
-            // <Link href={`/data/${value}`}>
             <IconButton
               color="primary"
-              onClick={() => router.push(`/data/${value}`)}
+              href={`/data/${value}`}
+              target="_blank"
+              rel="noreferrer noopener"
+              // onClick={() => router.push(`/data/${value}`)}
             >
-              <Launch />
+              <Visibility />
             </IconButton>
-            // </Link>
           );
         },
       },
@@ -128,11 +171,12 @@ export default function RecordsTable() {
     print: false,
     hint: "Hi",
     download: false,
+    responsive: "standard",
   };
 
   return (
     <MUIDataTable
-      title="Data"
+      title="Data Portal"
       data={data}
       columns={columns}
       options={options}

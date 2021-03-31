@@ -54,6 +54,7 @@ class CellExp(Base):
     id = Column(Integer, primary_key=True)
     roi_id = Column(String, index=True)
     data_id = Column(String, index=True)
+    marker = Column(String)
     expression = Column(ARRAY(Float))
 
 

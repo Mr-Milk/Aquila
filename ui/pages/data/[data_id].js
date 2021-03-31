@@ -1,4 +1,4 @@
-import Layout from "../layout";
+import Layout from "../../components/layout";
 import { useRouter } from "next/router";
 import { allDataIDs } from "../../data/api";
 import Typography from "@material-ui/core/Typography";
@@ -8,6 +8,7 @@ import HomeIcon from "@material-ui/icons/Home";
 import { Grid, Paper } from "@material-ui/core";
 import DataRecordsBox from "../../components/DataBox/DataRecordsBox";
 import DataStatsBox from "../../components/DataBox/DataStatsBox";
+import ROIBox from "../../components/DataBox/ROIBox";
 
 const useStyles = makeStyles((theme) => ({
   box: {
@@ -59,11 +60,12 @@ export default function DataPanel() {
                 </Paper>
               </Grid>
               <Grid item xs={12}>
-                <Paper className={classes.dataBox}>xs=12</Paper>
+                <Paper className={classes.dataBox}>
+                  <ROIBox dataID={data_id} />
+                </Paper>
               </Grid>
             </Grid>
           </div>
-          <p>{`This is a data page of ${data_id}`}</p>
         </Layout>
       );
     } else {

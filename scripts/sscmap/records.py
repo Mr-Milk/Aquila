@@ -253,9 +253,11 @@ class Record:
         # cell exp
         data_id_exp = []
         roi_id_exp = []
+        marker_exp = []
         markers = []
         expression = []
 
+        data_markers = self.data.var[self.markers_key].tolist()
         for n, roi in self.data.obs.groupby("roi_id"):
             # cell info
             roi_id.append(n)
@@ -278,12 +280,13 @@ class Record:
                 cell_type.append(roi["cell_type"].tolist())
             else:
                 cell_type.append([])
-            markers.append(self.data.var[self.markers_key].tolist())
+            markers.append(data_markers)
 
             # cell exp
-            data_id_exp += [self.data_id for _ in range(len(roi))]
-            roi_id_exp += [n for _ in range(len(roi))]
-            expression += self.data[self.data.obs["roi_id"] == n].X.copy().tolist()
+            expression += self.data[self.data.obs["roi_id"] == n].X.copy().T.tolist()
+            marker_exp += data_markers
+            data_id_exp += [self.data_id for _ in range(len(data_markers))]
+            roi_id_exp += [n for _ in range(len(data_markers))]
 
         self.DataRecord = self.meta.to_tb()
         self.DataStats = pd.DataFrame(
@@ -334,7 +337,12 @@ class Record:
             }
         )
         self.CellExp = pd.DataFrame(
-            {"roi_id": roi_id_exp, "data_id": data_id_exp, "expression": expression,}
+            {
+                "roi_id": roi_id_exp,
+                "data_id": data_id_exp,
+                "marker": marker_exp,
+                "expression": expression,
+            }
         )
         self.ROIInfo = pd.DataFrame(
             {

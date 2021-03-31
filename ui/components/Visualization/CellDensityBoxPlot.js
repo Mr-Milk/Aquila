@@ -33,7 +33,7 @@ function BoxStats(arr) {
 }
 
 export default function CellDensityBoxPlot(props) {
-  const data = props.data;
+  const { data, ...leftProps } = props;
   const cell_types = data["cell_types"];
   const density = data["density"];
 
@@ -114,6 +114,10 @@ export default function CellDensityBoxPlot(props) {
   };
 
   return (
-    <EChartsReact option={option} style={{ width: "650px", height: "500px" }} />
+    <EChartsReact
+      option={option}
+      style={{ width: "650px", height: "500px" }}
+      {...leftProps}
+    />
   );
 }

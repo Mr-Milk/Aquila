@@ -7,16 +7,20 @@ import Skeleton from "@material-ui/lab/Skeleton";
 import CellComponentsPie from "../Visualization/CellComponentsPie";
 import CellDensityBoxPlot from "../Visualization/CellDensityBoxPlot";
 import CellInteractionMap from "../Visualization/CellInteractionMap";
+import MarkerCoExpMap from "../Visualization/MarkerCoExpMap";
 
 const useStyles = makeStyles((theme) => ({
   root: {
     margin: theme.spacing(2),
     display: "flex",
     flexWrap: "wrap",
-    alignItems: "middle",
+    justifyContent: "center",
   },
   pie: {
     marginRight: theme.spacing(2),
+  },
+  graph: {
+    marginTop: theme.spacing(2),
   },
 }));
 
@@ -36,14 +40,21 @@ export default function DataStatsBox(props) {
             className={classes.pie}
           />
           <CellDensityBoxPlot data={data["cell_density"]} />
-          <CellInteractionMap data={data["cell_interaction"]} />
+          <CellInteractionMap
+            data={data["cell_interaction"]}
+            className={classes.graph}
+          />
+          <MarkerCoExpMap
+            data={data["co_expression"]}
+            className={classes.graph}
+          />
         </div>
       </>
     );
   } else {
     return (
       <>
-        <Skeleton width={"400px"} />
+        <Skeleton height={"400px"} />
       </>
     );
   }

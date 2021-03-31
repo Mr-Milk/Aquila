@@ -1,6 +1,6 @@
 import useSWR from "swr";
 
-const root = "http://127.0.0.1:5000";
+const root = "http://127.0.0.1:5001";
 const fetcher = (...args) => fetch(...args).then((res) => res.json());
 
 function fetchBase(url) {
@@ -31,4 +31,16 @@ export function dataRecord(data_id) {
 
 export function dataStats(data_id) {
   return fetchBase(`${root}/stats/${data_id}`);
+}
+
+export function roiMeta(data_id) {
+  return fetchBase(`${root}/roi/${data_id}`);
+}
+
+export function cellInfo(roi_id) {
+  return fetchBase(`${root}/cell_info/${roi_id}`);
+}
+
+export function expInfo(roi_id, marker) {
+  return fetchBase(`${root}/cell_exp/${roi_id}/${marker}`);
 }

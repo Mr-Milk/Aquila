@@ -2,8 +2,8 @@ import Head from "next/head";
 import { createMuiTheme, ThemeProvider } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
 
-import Header from "../components/Header";
-import Footer from "../components/Footer";
+import Header from "./Header";
+import Footer from "./Footer";
 
 const theme = createMuiTheme({
   palette: {
@@ -32,7 +32,9 @@ export default function layout({ children }) {
       </Head>
       <main>
         <Header />
-        <Container maxWidth="lg">{children}</Container>
+        <Container maxWidth={false} style={{ maxWidth: "1500px" }}>
+          {children}
+        </Container>
       </main>
       <Footer />
     </ThemeProvider>
