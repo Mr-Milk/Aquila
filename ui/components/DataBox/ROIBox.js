@@ -1,11 +1,8 @@
 import Skeleton from "@material-ui/lab/Skeleton";
 import React, { useState } from "react";
-import { cellInfo, dataRecord, dataStats, roiMeta } from "../../data/api";
+import { roiMeta } from "../../data/api";
 import { makeStyles } from "@material-ui/core/styles";
 import ROIMetaTable from "../SmallComponents/ROIMetaTable";
-import Typography from "@material-ui/core/Typography";
-import { Card } from "@material-ui/core";
-import CardContent from "@material-ui/core/CardContent";
 
 import ROICard from "../SmallComponents/ROICard";
 import ROICellMapWithSwitch from "../Visualization/ROICellMapWithSwitch";

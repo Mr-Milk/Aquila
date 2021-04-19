@@ -1,6 +1,4 @@
-import { Paper } from "@material-ui/core";
 import { dataRecord, dataStats } from "../../data/api";
-import EChartsReact from "echarts-for-react";
 import { makeStyles } from "@material-ui/core/styles";
 import Skeleton from "@material-ui/lab/Skeleton";
 

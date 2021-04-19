@@ -4,7 +4,6 @@ import Skeleton from "@material-ui/lab/Skeleton";
 import Link from "next/link";
 import Visibility from "@material-ui/icons/Visibility";
 import GetApp from "@material-ui/icons/GetApp";
-import Launch from "@material-ui/icons/Launch";
 import LinkIcon from "@material-ui/icons/Link";
 import { useRouter } from "next/router";
 
