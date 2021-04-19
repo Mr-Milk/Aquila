@@ -1,8 +1,8 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, PgPool, Row};
+use sqlx::{FromRow, PgPool};
 
-use crate::schema::QueryData;
+// use crate::schema::QueryData;
 
 #[derive(Serialize, Deserialize, FromRow, Debug)]
 pub struct DataRecords {
@@ -91,16 +91,16 @@ impl DataRecords {
         Ok(record)
     }
 
-    pub async fn filter_data_ids(query: QueryData, pool: &PgPool) -> Result<Vec<String>> {
-        let mut data_ids: Vec<String> = vec![];
-        let recs = sqlx::query(query.to_sql().as_str()).fetch_all(pool).await?;
-
-        for rec in recs {
-            data_ids.push(rec.get(0));
-        }
-
-        Ok(data_ids)
-    }
+    // pub async fn filter_data_ids(query: QueryData, pool: &PgPool) -> Result<Vec<String>> {
+    //     let mut data_ids: Vec<String> = vec![];
+    //     let recs = sqlx::query(query.to_sql().as_str()).fetch_all(pool).await?;
+    //
+    //     for rec in recs {
+    //         data_ids.push(rec.get(0));
+    //     }
+    //
+    //     Ok(data_ids)
+    // }
 }
 
 #[derive(Serialize, Deserialize, FromRow, Debug)]

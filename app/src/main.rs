@@ -13,7 +13,7 @@ mod schema;
 
 #[get("/")]
 async fn hello() -> impl Responder {
-    HttpResponse::Ok().body("Hi! This is the API of Baize: The spatial pathology database")
+    HttpResponse::Ok().body("Hi! This is the API of Aquila: The spatial single cell pathology database")
 }
 
 #[actix_web::main]
@@ -30,7 +30,7 @@ async fn main() -> Result<()> {
         .connect(&config.database_url)
         .await?;
 
-    let mut server = HttpServer::new(move || {
+    let server = HttpServer::new(move || {
         App::new()
             .wrap(Logger::default())
             .wrap(DefaultHeaders::new()

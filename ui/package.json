@@ -12,6 +12,7 @@
     "@material-ui/icons": "^4.11.2",
     "@material-ui/lab": "^4.0.0-alpha.57",
     "babel-plugin-styled-components": "^1.12.0",
+    "dotenv": "^8.2.0",
     "echarts": "^5.0.2",
     "echarts-for-react": "^3.0.1",
     "mathjs": "^9.3.0",

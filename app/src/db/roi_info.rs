@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, PgPool, Row};
+use sqlx::{FromRow, PgPool};
 
 
 #[derive(Serialize, Deserialize, FromRow, Debug)]

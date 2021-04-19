@@ -1,4 +1,3 @@
-import logging
 import os
 from ast import literal_eval
 from collections import Counter

@@ -1,5 +1,4 @@
-use actix_web::{get, HttpResponse, Responder, web};
-use serde::Serialize;
+use actix_web::{get, Responder, web};
 use sqlx::PgPool;
 
 use crate::db::{CellInfo, CellExp};

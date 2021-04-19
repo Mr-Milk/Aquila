@@ -1,6 +1,6 @@
 import useSWR from "swr";
 
-const root = "http://127.0.0.1:5001";
+const root = process.env.NEXT_PUBLIC_API_URL;
 const fetcher = (...args) => fetch(...args).then((res) => res.json());
 
 function fetchBase(url) {

@@ -19,7 +19,7 @@ export default function layout({ children }) {
   return (
     <ThemeProvider theme={theme}>
       <Head>
-        <title>Baize</title>
+        <title>Aquila</title>
         <link rel="icon" href="/favicon.ico" />
         <link
           rel="stylesheet"
