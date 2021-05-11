@@ -14,6 +14,7 @@ import ujson
 from anndata import AnnData
 
 from .db import CellExp, CellInfo, DataRecord, DataStats, ROIInfo, init_db
+from .guards import Global
 from .meta import RecordMeta
 
 
@@ -45,9 +46,9 @@ class Record:
         self,
         data: AnnData,
         groups_keys: Optional[List[str]] = None,
-        cell_type_key: Optional[str] = None,
-        markers_key: Optional[str] = None,
-        centroid_key: Optional[str] = None,
+        cell_type_key: Optional[str] = "cell_type",
+        markers_key: Optional[str] = "markers",
+        centroid_key: Optional[str] = "centroid",
         cell_x_key: Optional[str] = None,
         cell_y_key: Optional[str] = None,
         force: bool = False,
@@ -68,6 +69,12 @@ class Record:
                 columns={self.cell_type_key: "cell_type"}, inplace=True
             )
             self.cell_type_key = "cell_type"
+
+        if engine is None:
+            self.engine = Global.engine
+
+        if export is None:
+            self.export = Global.export
 
         if engine is not None:
             init_db(engine)
@@ -92,6 +99,7 @@ class Record:
         return self
 
     def run_analysis(self, expand=5):
+        st.CONFIG.CELL_TYPE_KEY = self.cell_type_key
         st.CONFIG.EXP_OBS = self.groups_keys
         st.CONFIG.CENTROID_KEY = self.centroid_key
         st.CONFIG.MARKER_KEY = self.markers_key
@@ -100,7 +108,7 @@ class Record:
         sc.pp.filter_genes(self.data, min_cells=100)
         # To eliminate the negative value, we need to transform all the data to positive
         # To preserve the distribution, we scale everything to (0, 1)
-        if self.meta.molecular.name == "Protein":
+        if self.meta.molecule.name == "Protein":
             self.data.X = (self.data.X - self.data.X.min()) / (
                 self.data.X.max() - self.data.X.min()
             )
@@ -131,15 +139,20 @@ class Record:
                 expand -= 2
             else:
                 break
-
+        print(f"Current neighbor count {neighbors_count}")
         self.co_expression_tb = st.spatial_co_expression(
             self.data, selected_markers=selected_markers, corr_cutoff=0.5
         ).result
 
         if self.meta.has_cell_type:
-            st.CONFIG.CELL_TYPE_KEY = "cell_type"
             self.cell_components_tb = st.cell_components(self.data).result
-            self.cell_density_tb = st.cell_density(self.data).result
+            if self.meta.resolution == -1:
+                ratio = 1
+            else:
+                ratio = (
+                    self.meta.resolution / 10 ** 6
+                )  # The resolution is nanometer, convert to mm
+            self.cell_density_tb = st.cell_density(self.data, ratio=ratio).result
             self.shannon_entropy_tb = st.spatial_heterogeneity(
                 self.data, method="shannon"
             ).result
@@ -352,7 +365,7 @@ class Record:
                     for _ in range(len(self.roi_meta))
                 ],
                 "meta": [
-                    i
+                    [str(x) for x in i]
                     for i in self.roi_meta[["roi_id"] + self.groups_keys]
                     .to_numpy()
                     .tolist()

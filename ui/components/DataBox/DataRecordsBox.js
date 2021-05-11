@@ -4,6 +4,13 @@ import Launch from "@material-ui/icons/Launch";
 import { dataRecord } from "../../data/api";
 import { makeStyles } from "@material-ui/core/styles";
 
+const linkPool = {
+  MIBI: "https://www.ionpath.com/",
+  IMC: "https://www.fluidigm.com/applications/imaging-mass-cytometry",
+  seqFISH: "https://www.seqfish.com/",
+  CODEX: "https://www.akoyabio.com/codex/",
+};
+
 const useStyles = makeStyles((theme) => ({
   link: {
     cursor: "pointer",
@@ -84,12 +91,12 @@ export default function DataRecordsBox(props) {
       </Typography>
 
       <Typography variant="body1" className={classes.pb} component="div">
-        <ItemTitle>Cells:</ItemTitle>
+        <ItemTitle>Number of Cell:</ItemTitle>
         {cell_count}
       </Typography>
 
       <Typography variant="body1" className={classes.pb}>
-        <ItemTitle>Markers:</ItemTitle>
+        <ItemTitle>Number of Marker:</ItemTitle>
         {marker_count}
       </Typography>
     </>
@@ -97,9 +104,6 @@ export default function DataRecordsBox(props) {
 }
 
 function TechChip(props) {
-  const linkPool = {
-    MIBI: "https://www.ionpath.com/",
-  };
   const link = linkPool[props.label];
   const pointerCursor = { cursor: "pointer" };
   return (

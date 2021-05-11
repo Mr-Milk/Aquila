@@ -30,8 +30,8 @@ export default function DataStatsBox(props) {
   if (data !== undefined) {
     const has_cell_type = recordData["has_cell_type"];
 
-    return (
-      <>
+    if (has_cell_type) {
+      return (
         <div className={classes.root}>
           <CellComponentsPie
             data={data["cell_components"]}
@@ -47,8 +47,17 @@ export default function DataStatsBox(props) {
             className={classes.graph}
           />
         </div>
-      </>
-    );
+      );
+    } else {
+      return (
+        <div className={classes.root}>
+          <MarkerCoExpMap
+            data={data["co_expression"]}
+            className={classes.graph}
+          />
+        </div>
+      );
+    }
   } else {
     return (
       <>

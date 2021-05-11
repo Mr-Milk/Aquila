@@ -30,6 +30,29 @@ export default function MarkerCoExpMap(props) {
   const markers = data["markers"];
   const relationship = data["relationship"];
 
+  let graphic = {};
+
+  if (markers.length === 0) {
+    graphic = {
+      type: "group",
+      left: "center",
+      top: "center",
+      children: [
+        {
+          type: "text",
+          z: 100,
+          left: "center",
+          top: "middle",
+          style: {
+            fill: "#333",
+            text: "No relationship to display",
+            fontSize: "24px",
+          },
+        },
+      ],
+    };
+  }
+
   const nodes = [];
   markers.map((c) => {
     nodes.push({ name: c });
@@ -75,6 +98,7 @@ export default function MarkerCoExpMap(props) {
       },
       text: ["Positive", "Negative"],
     },
+    graphic: [graphic],
     animationDurationUpdate: 1500,
     animationEasingUpdate: "quinticInOut",
     series: [

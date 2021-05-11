@@ -8,17 +8,18 @@ use sqlx::{FromRow, PgPool};
 pub struct DataRecords {
     data_id: String,
     technology: String,
+    species: String,
     tissue: String,
     disease: String,
     disease_subtype: String,
-    molecular: String,
+    molecule: String,
     source_name: String,
     source_url: String,
     journal: String,
-    year: i32,
-    resolution: i32,
-    cell_count: i32,
-    marker_count: i32,
+    year: i64,
+    resolution: i64,
+    cell_count: i64,
+    marker_count: i64,
     has_cell_type: bool,
 }
 
@@ -60,7 +61,7 @@ impl DataRecords {
         .await?;
 
         for rec in recs {
-            data_ids.push(rec.data_id);
+            data_ids.push(rec.data_id.unwrap());
         }
 
         Ok(data_ids)

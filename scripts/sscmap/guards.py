@@ -1,27 +1,43 @@
 from enum import Enum
+from pathlib import Path
+from typing import Optional, Union
 
+import sqlalchemy
 from pyensembl import EnsemblRelease
 
 data = EnsemblRelease(77)
 
 
+class _Global:
+    engine: Optional[sqlalchemy.engine.Engine] = None
+    export: Union[Path, str, None] = None
+
+
+Global = _Global()
+
+
 class Tech(Enum):
     # protein
-    IMC = "IMC"
-    MIBI = "MIBI"
-    CODEX = "CODEX"
+    IMC: str = "IMC"
+    MIBI: str = "MIBI"
+    CODEX: str = "CODEX"
 
     # RNA or DNA
-    MERFISH = "MERFISH"
-    osmFISH = "osmFISH"
-    seqFISH = "seqFISH"
-    seqFISHPlus = "seqFISH+"
-    GEOseq = "GEO-seq"
-    LCMseq = "LCM-seq"
+    MERFISH: str = "MERFISH"
+    osmFISH: str = "osmFISH"
+    seqFISH: str = "seqFISH"
+    seqFISHPlus: str = "seqFISH+"
+    GEOseq: str = "GEO-seq"
+    LCMseq: str = "LCM-seq"
 
 
-class Molecular(Enum):
-    RNA = "RNA"
-    DNA = "DNA"
-    Protein = "Protein"
-    Metabolite = "Metabolite"
+class Molecule(Enum):
+    RNA: str = "RNA"
+    DNA: str = "DNA"
+    Protein: str = "Protein"
+    Metabolite: str = "Metabolite"
+
+
+class Species(Enum):
+    Human: str = "Human"
+    Mouse: str = "Mouse"

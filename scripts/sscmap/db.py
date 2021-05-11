@@ -10,10 +10,11 @@ class DataRecord(Base):
 
     data_id = Column(String, primary_key=True)
     technology = Column(String, index=True)
+    species = Column(String, index=True)
     tissue = Column(String, index=True)
     disease = Column(String, index=True)
     disease_subtype = Column(String, index=True)
-    molecular = Column(String, index=True)
+    molecule = Column(String, index=True)
     source_name = Column(String)
     source_url = Column(String)
     journal = Column(String)

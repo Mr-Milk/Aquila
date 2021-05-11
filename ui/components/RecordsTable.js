@@ -53,9 +53,13 @@ export default function RecordsTable() {
   });
 
   const columns = [
+      {
+      name: "species",
+      label: "Species",
+    },
     {
-      name: "molecular",
-      label: "Molecular",
+      name: "molecule",
+      label: "Molecule",
     },
     {
       name: "technology",
@@ -85,18 +89,25 @@ export default function RecordsTable() {
       label: "Resolution",
       options: {
         filter: false,
+        customBodyRender: (value) => {
+          if (value === -1) {
+            return "-"
+          } else {
+            return value
+          }
+        },
       },
     },
     {
       name: "cell_count",
-      label: "Cells",
+      label: "Cell",
       options: {
         filter: false,
       },
     },
     {
       name: "marker_count",
-      label: "Markers",
+      label: "Marker",
       options: {
         filter: false,
       },

@@ -6,14 +6,15 @@ import pandas as pd
 import sqlalchemy
 import ujson
 
-from .guards import Molecular, Tech
+from .guards import Molecule, Species, Tech
 from .utils import cap_string, get_doi_info, up_string
 
 
 @dataclass
 class RecordMeta:
-    molecular: Molecular
+    molecule: Molecule
     technology: Tech
+    species: Species
     tissue: str
     disease: str
     disease_subtype: str
@@ -63,10 +64,11 @@ class RecordMeta:
         meta = dict(
             data_id=self.data_id,
             technology=self.technology.name,
+            species=self.species.name,
             tissue=cap_string(self.tissue),
             disease=cap_string(self.disease),
             disease_subtype=cap_string(self.disease_subtype),
-            molecular=self.molecular.name,
+            molecule=self.molecule.name,
             source_name=self.source_name,
             source_url=self.source_url,
             journal=self.journal,
