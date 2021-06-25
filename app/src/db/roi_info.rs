@@ -12,7 +12,7 @@ pub struct ROIInfo {
     header: Vec<String>,
     meta: Vec<String>,
     shannon_entropy: f64,
-    altieri_entropy: f64,
+    spatial_entropy: f64,
 }
 
 impl ROIInfo {

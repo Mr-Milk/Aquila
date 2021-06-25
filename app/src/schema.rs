@@ -1,7 +1,6 @@
 use std::fmt::{Debug, Display, Result};
 
 use serde::Deserialize;
-use serde::export::Formatter;
 
 fn construct_in_query(field: &str, item: Option<String>, as_type: &str) -> String {
     let sql = match item {
@@ -115,8 +114,8 @@ impl QueryData {
     }
 }
 
-impl Display for QueryData {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        write!(f, "{}", self.to_sql())
-    }
-}
+// impl Display for QueryData {
+//     fn fmt<W>(&self, f: &mut dyn Formatter) -> Result {
+//         write!(f, "{}", self.to_sql())
+//     }
+// }

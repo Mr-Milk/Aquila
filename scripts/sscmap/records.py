@@ -3,15 +3,17 @@ from ast import literal_eval
 from collections import Counter
 from pathlib import Path
 from typing import List, Optional, Union
-from uuid import uuid4
+from uuid import uuid1
 from zipfile import ZipFile
 
+import numpy as np
 import pandas as pd
 import scanpy as sc
 import spatialtis as st
 import sqlalchemy
 import ujson
-from anndata import AnnData
+from anndata import AnnData, read_h5ad
+from sqlalchemy.orm import sessionmaker
 
 from .db import CellExp, CellInfo, DataRecord, DataStats, ROIInfo, init_db
 from .guards import Global
@@ -29,7 +31,7 @@ class Record:
     # ROI Table
     roi_meta: Optional[pd.DataFrame] = None
     shannon_entropy_tb: Optional[pd.DataFrame] = None
-    altieri_entropy_tb: Optional[pd.DataFrame] = None
+    spatial_entropy_tb: Optional[pd.DataFrame] = None
 
     # Analysis Table
     cell_components_tb: Optional[pd.DataFrame] = None
@@ -44,25 +46,24 @@ class Record:
 
     def __init__(
         self,
-        data: AnnData,
+        file: Path,
         groups_keys: Optional[List[str]] = None,
         cell_type_key: Optional[str] = "cell_type",
         markers_key: Optional[str] = "markers",
         centroid_key: Optional[str] = "centroid",
         cell_x_key: Optional[str] = None,
         cell_y_key: Optional[str] = None,
-        force: bool = False,
-        engine: Optional[sqlalchemy.engine.Engine] = None,
-        export: Union[Path, str, None] = None,
+        verbose: bool = False,
     ):
-        self.data = data.copy()
+        self.file = file
+        self.data = read_h5ad(file)
         self.groups_keys = groups_keys
         self.cell_type_key = cell_type_key
         self.markers_key = markers_key
         self.centroid_key = centroid_key
         self.cell_x_key = cell_x_key
         self.cell_y_key = cell_y_key
-        self.force = force
+        self.verbose = verbose
 
         if self.cell_type_key is not None:
             self.data.obs.rename(
@@ -70,57 +71,79 @@ class Record:
             )
             self.cell_type_key = "cell_type"
 
-        if engine is None:
-            self.engine = Global.engine
+        self.engine = Global.engine
+        self.export = Global.export
+        init_db(self.engine)
 
-        if export is None:
-            self.export = Global.export
+        Session = sessionmaker()
 
-        if engine is not None:
-            init_db(engine)
-            self.engine = engine
+        Session.configure(bind=self.engine)
+        self.session = Session()
 
-        if export is not None:
-            if isinstance(export, str):
-                export = Path(export)
-            self.export = export
+    def ok(self, export=None, static=False, zipped=True):
+        db_record = self.session.query(DataRecord).filter(DataRecord.data_id == self.data_id).count()
+        if (db_record == 0) | ((db_record > 0) & (not Global.skip_exist)):
+            self.meta.cell_count, self.meta.marker_count = self.data.shape
+            print(
+                f"Data record {self.meta.data_id} has {self.meta.cell_count} cells and "
+                f"{self.meta.marker_count} markers."
+            )
+            self.get_db_table()
+            self.to_static(export, static, zipped)
 
-    def ok(self, expand=5, export=None, static=False, zipped=True):
-        self.run_analysis(expand)
-        self.get_db_table()
-        self.to_static(export, static, zipped)
-        self.to_db()
+            # if the dump process is incomplete, abort and clean from db
+            try:
+                self.to_db()
+            except Exception as e:
+                print(e)
+                self.drop_from_db()
+                self.data.write(self.file)
 
-    def set_meta(self, doi=None, data_id=None, **kwargs):
-        self.meta = RecordMeta(**kwargs).set_id(doi=doi, data_id=data_id)
+            print(f"Record {self.data_id} dumped to DB successfully")
+        else:
+            print(f"Record {self.data_id} already exist")
+
+    def set_meta(self, doi=None, data_id=None, id_suffix=None, **kwargs):
+        self.meta = RecordMeta(**kwargs).set_id(doi=doi, data_id=data_id, id_suffix=id_suffix)
         self.data_id = self.meta.data_id
         if self.cell_type_key is not None:
             self.meta.has_cell_type = True
         return self
 
     def run_analysis(self, expand=5):
-        st.CONFIG.CELL_TYPE_KEY = self.cell_type_key
-        st.CONFIG.EXP_OBS = self.groups_keys
-        st.CONFIG.CENTROID_KEY = self.centroid_key
-        st.CONFIG.MARKER_KEY = self.markers_key
-        st.CONFIG.VERBOSE = True
 
-        sc.pp.filter_genes(self.data, min_cells=100)
-        # To eliminate the negative value, we need to transform all the data to positive
-        # To preserve the distribution, we scale everything to (0, 1)
+        st_kwargs = dict(
+            cell_type_key=self.cell_type_key,
+            exp_obs=self.groups_keys,
+            centroid_key=self.centroid_key,
+            marker_key=self.markers_key,
+        )
+        # st.CONFIG.CELL_TYPE_KEY = self.cell_type_key
+        # st.CONFIG.EXP_OBS = self.groups_keys
+        # st.CONFIG.CENTROID_KEY = self.centroid_key
+        # st.CONFIG.MARKER_KEY = self.markers_key
+        st.CONFIG.VERBOSE = self.verbose
+        st.CONFIG.PBAR = False
+
+        if not isinstance(self.data.X, np.ndarray):
+            self.data.X = self.data.X.toarray()
+
         if self.meta.molecule.name == "Protein":
             self.data.X = (self.data.X - self.data.X.min()) / (
                 self.data.X.max() - self.data.X.min()
             )
+
+        # eliminate NA from array
+        self.data.X = np.nan_to_num(self.data.X)
+
+        sc.pp.filter_cells(self.data, min_genes=1)
+        sc.pp.filter_genes(self.data, min_cells=100)
+        # To eliminate the negative value, we need to transform all the data to positive
+        # To preserve the distribution, we scale everything to (0, 1)
+
         sc.pp.normalize_total(self.data, target_sum=100)
         sc.pp.log1p(self.data)
         sc.pp.highly_variable_genes(self.data, min_mean=0.0125, min_disp=0.5)
-
-        self.meta.cell_count, self.meta.marker_count = self.data.shape
-        print(
-            f"Data record {self.meta.data_id} has {self.meta.cell_count} cells and "
-            f"{self.meta.marker_count} markers."
-        )
 
         selected_markers = []
         for m, hv in zip(
@@ -129,67 +152,84 @@ class Record:
             if hv:
                 selected_markers.append(m)
 
+        self.data.obs = self.data.obs.reset_index(drop=True)
+
         # iterative find neighbors until NN reach [4.5, 7)
-        while True:
-            st.find_neighbors(self.data, expand=expand, count=True)
-            neighbors_count = self.data.obs.cell_neighbors_count.mean()
-            if neighbors_count <= 4.5:
-                expand += 2
-            elif neighbors_count > 7:
-                expand -= 2
-            else:
-                break
+        st.find_neighbors(self.data, expand, count=True, **st_kwargs)
+        neighbors_count = self.data.obs.cell_neighbors_count.mean()
         print(f"Current neighbor count {neighbors_count}")
-        self.co_expression_tb = st.spatial_co_expression(
-            self.data, selected_markers=selected_markers, corr_cutoff=0.5
-        ).result
+
+        st.spatial_co_expression(self.data, use_cell_type=True, selected_markers=selected_markers, corr_cutoff=0.5, **st_kwargs)
 
         if self.meta.has_cell_type:
-            self.cell_components_tb = st.cell_components(self.data).result
             if self.meta.resolution == -1:
-                ratio = 1
+                ratio = 10 ** -4
             else:
                 ratio = (
                     self.meta.resolution / 10 ** 6
                 )  # The resolution is nanometer, convert to mm
-            self.cell_density_tb = st.cell_density(self.data, ratio=ratio).result
-            self.shannon_entropy_tb = st.spatial_heterogeneity(
-                self.data, method="shannon"
-            ).result
-            self.altieri_entropy_tb = st.spatial_heterogeneity(
-                self.data, method="altieri"
-            ).result
-            self.cell_interaction_tb = st.neighborhood_analysis(
-                self.data, order=False
-            ).result
+            st.cell_density(self.data, ratio=ratio, **st_kwargs)
+            st.cell_components(self.data, **st_kwargs)
+            st.spatial_heterogeneity(self.data, method="shannon", export_key="shannon_entropy", **st_kwargs)
+            st.spatial_heterogeneity(self.data, method="leibovici", export_key="spatial_entropy", **st_kwargs)
+            st.neighborhood_analysis(self.data, order=False, **st_kwargs)
 
-            self.shannon_entropy_tb.rename(
-                columns={"heterogeneity": "shannon_entropy"}, inplace=True
-            )
-            self.altieri_entropy_tb.rename(
-                columns={"heterogeneity": "altieri_entropy"}, inplace=True
-            )
-
+            # self.shannon_entropy_tb.rename(
+            #     columns={"heterogeneity": "shannon_entropy"}, inplace=True
+            # )
+            # self.spatial_entropy_tb.rename(
+            #     columns={"heterogeneity": "spatial_entropy"}, inplace=True
+            # )
+            #
+            # # cast entropy tb to be the same types
+            # self.shannon_entropy_tb = self.shannon_entropy_tb.astype(object)
+            # self.spatial_entropy_tb = self.spatial_entropy_tb.astype(object)
+        self.data.write(self.file)
+        print(f"Finish analysis on {self.file}")
         return self
 
     def roi_id(self):
         roi_id = []
-        for n, df in self.data.obs.groupby(self.groups_keys):
-            uid = str(uuid4())
+        track_ix = []
+        for n, df in self.data.obs.groupby(self.groups_keys[-1], sort=False):
+            uid = str(uuid1())
             roi_id += [uid for _ in range(len(df))]
+            track_ix += list(df.index)
+        self.data.obs["roi_id"] = pd.Series(roi_id, index=track_ix)
 
-        self.data.obs["roi_id"] = roi_id
-        self.roi_meta = self.data.obs[["roi_id"] + self.groups_keys].drop_duplicates()
+        self.roi_meta = self.data.obs[["roi_id"] + self.groups_keys].drop_duplicates().reset_index()
+        self.roi_meta = self.roi_meta.astype(object)
+
         if self.meta.has_cell_type:
+
+            self.shannon_entropy_tb = st.get_result(self.data, "shannon_entropy")
+            self.spatial_entropy_tb = st.get_result(self.data, "spatial_entropy")
+            self.shannon_entropy_tb.rename(
+                columns={"heterogeneity": "shannon_entropy"}, inplace=True
+            )
+            self.spatial_entropy_tb.rename(
+                columns={"heterogeneity": "spatial_entropy"}, inplace=True
+            )
+            self.shannon_entropy_tb = self.shannon_entropy_tb.astype(object)
+            self.spatial_entropy_tb = self.spatial_entropy_tb.astype(object)
+
+            merge_key = self.groups_keys[-1]
+            self.roi_meta[merge_key] = self.roi_meta[merge_key].astype(str)
+            self.shannon_entropy_tb[merge_key] = self.shannon_entropy_tb[merge_key].astype(str)
+            self.spatial_entropy_tb[merge_key] = self.spatial_entropy_tb[merge_key].astype(str)
+
             self.roi_meta = self.roi_meta.merge(
                 self.shannon_entropy_tb.merge(
-                    self.altieri_entropy_tb, on=self.groups_keys
+                    self.spatial_entropy_tb, on=self.groups_keys[-1]
                 ),
-                on=self.groups_keys,
+                on=self.groups_keys[-1],
             )
         else:
             self.roi_meta["shannon_entropy"] = 0
-            self.roi_meta["altieri_entropy"] = 0
+            self.roi_meta["spatial_entropy"] = 0
+
+        self.roi_meta = self.roi_meta[['roi_id', 'shannon_entropy', 'spatial_entropy'] + self.groups_keys]
+        assert len(self.roi_meta['roi_id']) == len(self.roi_meta['roi_id'].unique())
 
     def cell_x_y(self):
         if (self.cell_x_key is None) | (self.cell_y_key is None):
@@ -208,9 +248,7 @@ class Record:
                 columns={self.cell_x_key: "cell_x", self.cell_y_key: "cell_y"}
             )
 
-    def get_db_table(self):
-        self.roi_id()
-        self.cell_x_y()
+    def get_dbstats(self):
         # Handle statistics
         cell_components_types = []
         cell_components_data = []
@@ -222,85 +260,39 @@ class Record:
         cci_data = []
         # Cell components
         if self.meta.has_cell_type:
+            self.cell_components_tb = st.get_result(self.data, "cell_components")
             cell_components = (
                 self.cell_components_tb.groupby("type")
-                .sum()
-                .reset_index()[["type", "value"]]
+                    .sum()
+                    .reset_index()[["type", "value"]]
             )
             cell_components_types = cell_components["type"].tolist()
             cell_components_data = cell_components["value"].tolist()
             # Cell density
+            self.cell_density_tb = st.get_result(self.data, "cell_density")
             for t, g in self.cell_density_tb.groupby("type"):
                 cell_density_types.append(t)
                 cell_density_data.append(list(g["value"]))
             # Cell interaction
+            self.cell_interaction_tb = st.get_result(self.data, "neighborhood_analysis")
             cci = self.cell_interaction_tb
             cci_types = pd.unique([*cci["type1"].unique(), *cci["type2"].unique()])
             for t, g in cci.groupby(["type1", "type2"]):
                 counts = {0: 0, 1: 0, -1: 0, **Counter(g["value"])}
                 roi_sum = sum(list(counts.values()))
                 if counts[1] > counts[-1]:
-                    value = counts[1] / roi_sum
+                    value = counts[1] / roi_sum  # association
                 else:
-                    value = counts[-1] / roi_sum
-                if value > 0:
-                    cci_data.append([*t, value])
-        # Co expression
+                    value = - (counts[-1] / roi_sum)  # avoidance
+                cci_data.append([*t, value])
+            # Co expression
+        self.co_expression_tb = st.get_result(self.data, "co_expression")
         co_exp = self.co_expression_tb
         co_exp_markers = pd.unique(
             [*co_exp["marker1"].unique(), *co_exp["marker2"].unique()]
         )
         co_exp_data = co_exp[["marker1", "marker2", "corr"]].to_numpy().tolist()
 
-        # cell info
-        roi_id = []
-        data_id = []
-        cell_x = []
-        cell_y = []
-        cell_type = []
-        cell_name = []
-        neighbor_one = []
-        neighbor_two = []
-
-        # cell exp
-        data_id_exp = []
-        roi_id_exp = []
-        marker_exp = []
-        markers = []
-        expression = []
-
-        data_markers = self.data.var[self.markers_key].tolist()
-        for n, roi in self.data.obs.groupby("roi_id"):
-            # cell info
-            roi_id.append(n)
-            data_id.append(self.data_id)
-            cell_x.append(roi["cell_x"].tolist())
-            cell_y.append(roi["cell_y"].tolist())
-            cell_name.append(roi[st.CONFIG.neighbors_ix_key].tolist())
-            neigh_ones = []
-            neigh_twos = []
-            for cent, neigh in zip(
-                roi[st.CONFIG.neighbors_ix_key], roi[st.CONFIG.NEIGHBORS_KEY]
-            ):
-                for c in neigh:
-                    if c > cent:
-                        neigh_ones.append(cent)
-                        neigh_twos.append(c)
-            neighbor_one.append(neigh_ones)
-            neighbor_two.append(neigh_twos)
-            if self.meta.has_cell_type:
-                cell_type.append(roi["cell_type"].tolist())
-            else:
-                cell_type.append([])
-            markers.append(data_markers)
-
-            # cell exp
-            expression += self.data[self.data.obs["roi_id"] == n].X.copy().T.tolist()
-            marker_exp += data_markers
-            data_id_exp += [self.data_id for _ in range(len(data_markers))]
-            roi_id_exp += [n for _ in range(len(data_markers))]
-
-        self.DataRecord = self.meta.to_tb()
         self.DataStats = pd.DataFrame(
             {
                 "data_id": self.data_id,
@@ -335,6 +327,78 @@ class Record:
             },
             index=[0],
         )
+
+    def get_roiinfo(self):
+        self.ROIInfo = pd.DataFrame(
+            {
+                "roi_id": self.roi_meta["roi_id"].tolist(),
+                "data_id": [self.data_id for _ in range(len(self.roi_meta))],
+                "header": [
+                    ["roi_id"] + self.groups_keys
+                    for _ in range(len(self.roi_meta))
+                ],
+                "meta": [
+                    [str(x) for x in i]
+                    for i in self.roi_meta[["roi_id"] + self.groups_keys]
+                        .to_numpy()
+                        .tolist()
+                ],
+                "shannon_entropy": self.roi_meta["shannon_entropy"].tolist(),
+                "spatial_entropy": self.roi_meta["spatial_entropy"].tolist(),
+            }
+        )
+
+    def get_cell_info_exp(self):
+        # cell info
+        roi_id = []
+        data_id = []
+        cell_x = []
+        cell_y = []
+        cell_type = []
+        cell_name = []
+        neighbor_one = []
+        neighbor_two = []
+
+        # cell exp
+        data_id_exp = []
+        roi_id_exp = []
+        marker_exp = []
+        markers = []
+        expression = []
+
+        data_markers = self.data.var[self.markers_key].tolist()
+        for n, roi in self.data.obs.groupby("roi_id"):
+            # cell info
+            roi_id.append(n)
+            data_id.append(self.data_id)
+            cell_x.append(roi["cell_x"].tolist())
+            cell_y.append(roi["cell_y"].tolist())
+            cell_name.append(roi[st.CONFIG.neighbors_ix_key].tolist())
+            neigh_ones = []
+            neigh_twos = []
+            for cent, neigh in zip(
+                    roi[st.CONFIG.neighbors_ix_key], roi[st.CONFIG.NEIGHBORS_KEY]
+            ):
+                if isinstance(neigh, str):
+                    neigh = eval(neigh)
+                for c in neigh:
+                    if c > cent:
+                        neigh_ones.append(cent)
+                        neigh_twos.append(c)
+            neighbor_one.append(neigh_ones)
+            neighbor_two.append(neigh_twos)
+            if self.meta.has_cell_type:
+                cell_type.append(roi["cell_type"].tolist())
+            else:
+                cell_type.append([])
+            markers.append(data_markers)
+
+            # cell exp
+            expression += self.data[self.data.obs["roi_id"] == n].X.copy().T.tolist()
+            marker_exp += data_markers
+            data_id_exp += [self.data_id for _ in range(len(data_markers))]
+            roi_id_exp += [n for _ in range(len(data_markers))]
+
         self.CellInfo = pd.DataFrame(
             {
                 "roi_id": roi_id,
@@ -356,24 +420,17 @@ class Record:
                 "expression": expression,
             }
         )
-        self.ROIInfo = pd.DataFrame(
-            {
-                "roi_id": self.roi_meta["roi_id"].tolist(),
-                "data_id": [self.data_id for _ in range(len(self.roi_meta))],
-                "header": [
-                    self.roi_meta.columns.tolist()[0:-2]
-                    for _ in range(len(self.roi_meta))
-                ],
-                "meta": [
-                    [str(x) for x in i]
-                    for i in self.roi_meta[["roi_id"] + self.groups_keys]
-                    .to_numpy()
-                    .tolist()
-                ],
-                "shannon_entropy": self.roi_meta["shannon_entropy"].tolist(),
-                "altieri_entropy": self.roi_meta["altieri_entropy"].tolist(),
-            }
-        )
+
+    def get_db_table(self):
+        self.roi_id()
+        self.cell_x_y()
+
+        self.get_dbstats()
+        self.get_cell_info_exp()
+        self.get_roiinfo()
+        self.DataRecord = self.meta.to_tb()
+
+
 
     def to_static(self, export=None, static=False, zipped=True):
         if export is not None:

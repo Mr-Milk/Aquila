@@ -1,92 +1,72 @@
 import Layout from "../components/layout";
 import DBStats from "../components/DBStats";
 import Typography from "@material-ui/core/Typography";
-import { makeStyles } from "@material-ui/core/styles";
+import {makeStyles} from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
 
 import RecordsTable from "../components/RecordsTable";
-import { Paper } from "@material-ui/core";
 
-import Particles from "react-particles-js";
+// import ParticlesBg from 'particles-bg'
 
 const useStyles = makeStyles((theme) => ({
-  titleBox: {
-    height: "550px",
-    display: "flex",
-    flexDirection: "column",
-    flexWrap: "wrap",
-    flexGrow: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    color: "#26a69a",
-    marginTop: theme.spacing(2),
-  },
-  bg: {
-    position: "absolute",
-    zIndex: -1,
-    top: "50px",
-    left: "0px",
-    height: "550px",
-  },
-  intro: {},
+    titleBox: {
+        height: "550px",
+        display: "flex",
+        flexDirection: "column",
+        flexWrap: "wrap",
+        flexGrow: 1,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    desc: {
+        marginTop: theme.spacing(4),
+        marginBottom: theme.spacing(4),
+        paddingRight: theme.spacing(14),
+        paddingLeft: theme.spacing(14),
+        fontSize: "1.5rem",
+        lineHeight: "2rem",
+        color: "#555555",
+        [theme.breakpoints.down('sm')]: {
+            paddingRight: theme.spacing(2),
+            paddingLeft: theme.spacing(2),
+        }
+    },
+    bg: {
+        position: "absolute",
+        zIndex: -1,
+        top: "50px",
+        left: "0px",
+        height: "550px",
+    },
+    logo: {
+        marginTop: theme.spacing(3),
+        width: "50%",
+        [theme.breakpoints.down('sm')]: {
+            width: "70%",
+
+        }
+    },
+    tb: {
+        marginTop: theme.spacing(2),
+    }
 }));
 
 export default function Home() {
-  const classes = useStyles();
-  return (
-    <Layout>
-      <Container className={classes.titleBox}>
-        <Particles
-          params={{
-            particles: {
-              number: {
-                value: 150,
-                density: {
-                  enable: true,
-                  value_area: 1200,
-                },
-              },
-              color: {
-                value: "#ff8f00",
-              },
-              move: {
-                direction: "right",
-                speed: 0.1,
-              },
-              size: {
-                value: 3,
-              },
-              line_linked: {
-                enable: true,
-                color: "#dddddd",
-              },
-            },
-            interactivity: {
-              events: {
-                onclick: {
-                  enable: true,
-                  mode: "push",
-                },
-              },
-              modes: {
-                push: {
-                  particles_nb: 1,
-                },
-              },
-            },
-            retina_detect: true,
-          }}
-          className={classes.bg}
-        />
-        <Typography variant="h4" className={classes.title}>
-          Aquila: Spatial Single Cell Pathology Database
-        </Typography>
-      </Container>
+    const classes = useStyles();
+    return (
+        <Layout>
+            {/*<ParticlesBg num={200} type="tadpole" bg={true} className={classes.bg}/>*/}
+            <Container style={{textAlign: 'center'}}>
+                <img src={"/aquila.png"} alt={"logo of aquila"} className={classes.logo}/>
 
-      <DBStats />
-      <RecordsTable />
-    </Layout>
-  );
+                <Typography variant="body1" className={classes.desc}>
+                    Aquila is a spatial single cell pathology database, we collect single cell data with spatial
+                    information.
+                </Typography>
+            </Container>
+
+            <DBStats/>
+            <RecordsTable className={classes.tb}/>
+        </Layout>
+    );
 }

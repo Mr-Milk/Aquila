@@ -1,13 +1,11 @@
 import hashlib
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Optional
 
 import pandas as pd
-import sqlalchemy
-import ujson
 
 from .guards import Molecule, Species, Tech
-from .utils import cap_string, get_doi_info, up_string
+from .utils import cap_string, get_doi_info
 
 
 @dataclass
@@ -22,28 +20,36 @@ class RecordMeta:
     marker_count: int = 0
     has_cell_type: bool = False
 
-    data_id: str = ""
-    source_name: str = ""
-    source_url: str = ""
-    journal: str = ""
-    year: int = 0
+    data_id: str = field(default=None)
+    source_name: str = field(default=None)
+    source_url: str = field(default=None)
+    journal: str = field(default=None)
+    year: int = field(default=None)
     resolution: int = -1  # unit: nano meter
 
     def set_id(
         self,
         doi: Optional[str] = None,
         data_id: Optional[str] = None,
-        engine: Optional[sqlalchemy.engine.Engine] = None,
+        id_suffix: Optional[str] = None,
     ):
         if doi is not None:
             result = get_doi_info(doi)
             h = hashlib.blake2s(digest_size=16)
             h.update(result["doi"].encode())
             self.data_id = h.hexdigest()
-            self.source_name = result["source_name"]
-            self.source_url = result["source_url"]
-            self.journal = result["journal"]
-            self.year = result["year"]
+            if id_suffix is not None:
+                self.data_id += f"-{id_suffix}"
+            if self.source_name is None:
+                self.source_name = result["source_name"]
+            if self.source_url is None:
+                self.source_url = result["source_url"]
+            if self.journal is None:
+                self.journal = result["journal"]
+            if self.year is None:
+                self.year = result["year"]
+
+        print(f"{self.data_id}, journal: {self.journal}, year: {self.year}\n{self.source_name}")
 
         if data_id is not None:
             self.data_id = data_id

@@ -42,12 +42,25 @@ def get_gene_ids(gene_names):
 def get_doi_info(doi: str):
     r = Works(etiquette=info)
     result = r.doi(doi)
+    journal = None
+    if len(result["container-title"]) > 0:
+        journal = result["container-title"][0]
+    else:
+        journal = result["publisher"]
+
+    year = result["issued"]["date-parts"][0][0]
+    if (year is None) | (year == 0):
+        try:
+            year = result["created"]["date-parts"][0][0]
+        except:
+            pass
+
     return dict(
         doi=result["DOI"],
         source_url=result["URL"],
-        journal=result["container-title"][0],
+        journal=journal,
         source_name=result["title"][0],
-        year=int(result["published-print"]["date-parts"][0][0]),
+        year=int(year),
     )
 
 

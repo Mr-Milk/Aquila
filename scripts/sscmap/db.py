@@ -1,6 +1,7 @@
 from sqlalchemy import Boolean, Column, Float, Integer, String
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.declarative import declarative_base
+from .guards import Global
 
 Base = declarative_base()
 
@@ -22,7 +23,8 @@ class DataRecord(Base):
     resolution = Column(Integer, index=True)
     cell_count = Column(Integer, index=True)
     marker_count = Column(Integer, index=True)
-    has_cell_type = Column(Boolean, index=True)
+    has_cell_type = Column(Boolean)
+    notice = Column(String)
 
 
 class DataStats(Base):
@@ -67,8 +69,14 @@ class ROIInfo(Base):
     header = Column(ARRAY(String))
     meta = Column(ARRAY(String))
     shannon_entropy = Column(Float)
-    altieri_entropy = Column(Float)
+    spatial_entropy = Column(Float)
 
 
 def init_db(engine):
     Base.metadata.create_all(engine)
+
+
+def clean_db(engine=None):
+    if engine is None:
+        engine = Global.engine
+    Base.metadata.drop_all(engine)

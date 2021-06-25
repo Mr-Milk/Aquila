@@ -16,11 +16,12 @@ pub struct DataRecords {
     source_name: String,
     source_url: String,
     journal: String,
-    year: i64,
-    resolution: i64,
-    cell_count: i64,
-    marker_count: i64,
+    year: i32,
+    resolution: i32,
+    cell_count: i32,
+    marker_count: i32,
     has_cell_type: bool,
+    notice: Option<String>,
 }
 
 impl DataRecords {
@@ -61,7 +62,7 @@ impl DataRecords {
         .await?;
 
         for rec in recs {
-            data_ids.push(rec.data_id.unwrap());
+            data_ids.push(rec.data_id);
         }
 
         Ok(data_ids)

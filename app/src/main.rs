@@ -38,7 +38,7 @@ async fn main() -> Result<()> {
                 .header("Access-Control-Allow-Credentials", "true"))
             .data(db_pool.clone())
             .service(hello)
-            .service(fs::Files::new("/static", "../scripts/data").show_files_listing())
+            .service(fs::Files::new("/static", "D:/Projects/SCP-DB/aquila-static").show_files_listing())
             .configure(routes::data_records_init)
             .configure(routes::data_stats_init)
             .configure(routes::roi_info_init)
