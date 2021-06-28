@@ -10,6 +10,8 @@ import {useRouter} from "next/router";
 import {records} from "../data/api";
 import {Alert} from "@material-ui/lab";
 import {IconButton, Snackbar} from "@material-ui/core";
+import {createMuiTheme} from "@material-ui/core/styles";
+import Button from "@material-ui/core/Button";
 
 export default function RecordsTable() {
     const router = useRouter();
@@ -53,6 +55,28 @@ export default function RecordsTable() {
     });
 
     const columns = [
+                {
+            name: "data_id",
+            label: "View",
+            options: {
+                filter: false,
+                customBodyRender: (value) => {
+                    return (
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            color="primary"
+                            href={`/data/${value}`}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            // onClick={() => router.push(`/data/${value}`)}
+                        >
+                            View
+                        </Button>
+                    );
+                },
+            },
+        },
         {
             name: "species",
             label: "Species",
@@ -86,7 +110,7 @@ export default function RecordsTable() {
         },
         {
             name: "resolution",
-            label: "Resolution",
+            label: "Resolution(nm)",
             options: {
                 filter: false,
                 customBodyRender: (value) => {
@@ -133,7 +157,7 @@ export default function RecordsTable() {
             },
         },
         {
-            name: "download",
+            name: "data_id",
             label: "Download",
             options: {
                 sort: false,
@@ -142,32 +166,11 @@ export default function RecordsTable() {
                     return (
                         <IconButton
                             color="primary"
-                            href={value}
+                            href={`/static/${value}.zip`}
                             rel="noreferrer noopener"
                             download
                         >
                             <GetApp/>
-                        </IconButton>
-                    );
-                },
-            },
-        },
-        {
-            name: "data_id",
-            label: "View",
-            options: {
-                sort: false,
-                filter: false,
-                customBodyRender: (value) => {
-                    return (
-                        <IconButton
-                            color="primary"
-                            href={`/data/${value}`}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                            // onClick={() => router.push(`/data/${value}`)}
-                        >
-                            <Visibility/>
                         </IconButton>
                     );
                 },
@@ -183,6 +186,10 @@ export default function RecordsTable() {
         download: false,
         responsive: "standard",
         tableBodyHeight: "50%",
+        sortOrder: {
+                    name: 'year',
+                    direction: 'desc',
+                },
     };
 
     return (

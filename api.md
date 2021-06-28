@@ -1,9 +1,9 @@
-# API Document of Baize
+# API Document of Aquila
 
-**API Root**: [api.baize.cheunglab.org]()
+**API Root**: [api.aquila.cheunglab.org]()
 
 
-**GET** ```/download/{data_id}```: Download a .zip file of a data
+**GET** ```/static/{data_id}```: Download a .zip file of a data
 
 **GET** ```/dbstats```: Get statistic of database
 ```rust

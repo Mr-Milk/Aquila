@@ -5,6 +5,7 @@ import {makeStyles} from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
 
 import RecordsTable from "../components/RecordsTable";
+import Button from "@material-ui/core/Button";
 
 // import ParticlesBg from 'particles-bg'
 
@@ -29,6 +30,10 @@ const useStyles = makeStyles((theme) => ({
         [theme.breakpoints.down('sm')]: {
             paddingRight: theme.spacing(2),
             paddingLeft: theme.spacing(2),
+            fontSize: "1rem",
+            lineHeight: "1.5rem",
+            marginTop: theme.spacing(2),
+        marginBottom: theme.spacing(2),
         }
     },
     bg: {
@@ -48,6 +53,10 @@ const useStyles = makeStyles((theme) => ({
     },
     tb: {
         marginTop: theme.spacing(2),
+    },
+    banner: {
+        textAlign: 'center',
+        marginBottom: '2rem'
     }
 }));
 
@@ -56,13 +65,16 @@ export default function Home() {
     return (
         <Layout>
             {/*<ParticlesBg num={200} type="tadpole" bg={true} className={classes.bg}/>*/}
-            <Container style={{textAlign: 'center'}}>
+            <Container className={classes.banner}>
                 <img src={"/aquila.png"} alt={"logo of aquila"} className={classes.logo}/>
 
                 <Typography variant="body1" className={classes.desc}>
                     Aquila is a spatial single cell pathology database, we collect single cell data with spatial
-                    information.
+                    information. Start viewing the data at the table below.
                 </Typography>
+                <Button variant={"outlined"} color={"primary"} href={"/about"}>
+                    How to use?
+                </Button>
             </Container>
 
             <DBStats/>

@@ -15,7 +15,6 @@ const useStyles = makeStyles((theme) => ({
         justifyContent: "center",
     },
     tb: {
-        width: "500px",
         marginRight: theme.spacing(2),
         marginBottom: theme.spacing(2),
     },
@@ -61,13 +60,13 @@ export default function ROIBox(props) {
                     update={updateRoiId}
                     className={classes.tb}
                 />
-                <div className={classes.cardContainer}>
+                {/*<div className={classes.cardContainer}>*/}
                     <ROICard
                         MetaTable={MetaTable}
                         roiID={roiID}
-                        className={classes.card}
+                        // className={classes.card}
                     />
-                </div>
+                {/*</div>*/}
                 <div className={classes.mapContainer}>
                     <ROICellMapWithSwitch roiID={roiID}/>
                     <ROIMarkerMapWithSelector roiID={roiID}/>

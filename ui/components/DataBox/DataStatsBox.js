@@ -6,6 +6,7 @@ import CellComponentsPie from "../Visualization/CellComponentsPie";
 import CellDensityBoxPlot from "../Visualization/CellDensityBoxPlot";
 import CellInteractionMap from "../Visualization/CellInteractionMap";
 import MarkerCoExpMap from "../Visualization/MarkerCoExpMap";
+import Typography from "@material-ui/core/Typography";
 
 const useStyles = makeStyles((theme) => ({
     root: {
@@ -42,27 +43,26 @@ export default function DataStatsBox(props) {
                         data={data["cell_interaction"]}
                         className={classes.graph}
                     />
-                    <MarkerCoExpMap
-                        data={data["co_expression"]}
-                        className={classes.graph}
-                    />
+                    {/*<MarkerCoExpMap*/}
+                    {/*    data={data["co_expression"]}*/}
+                    {/*    className={classes.graph}*/}
+                    {/*/>*/}
                 </div>
             );
         } else {
             return (
-                <div className={classes.root}>
-                    <MarkerCoExpMap
-                        data={data["co_expression"]}
-                        className={classes.graph}
-                    />
-                </div>
+                <Typography color={"textSecondary"}>No available statistic results due to lack of cell type in this dataset</Typography>
+                // <div className={classes.root}>
+                //     <MarkerCoExpMap
+                //         data={data["co_expression"]}
+                //         className={classes.graph}
+                //     />
+                // </div>
             );
         }
     } else {
         return (
-            <>
-                <Skeleton height={"400px"}/>
-            </>
+            <Skeleton height={"400px"}/>
         );
     }
 }

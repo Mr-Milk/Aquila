@@ -16,20 +16,18 @@ const useStyles = makeStyles((theme) => ({
     card: {
         width: "120px",
         height: "120px",
-        [theme.breakpoints.down["sm"]]: {
-            width: "100px",
-            height: "100px",
+        [theme.breakpoints.down("sm")]: {
+            width: "80px",
+            height: "80px",
         }
     },
-    title: {
+    text: {
         fontSize: "1.3rem",
-        [theme.breakpoints.down['sm']]: {
-            fontSize: "1.1rem"
+        paddingBottom: theme.spacing(2),
+        [theme.breakpoints.down('sm')]: {
+            fontSize: "0.8rem"
         }
-    },
-    pos: {
-        marginTop: theme.spacing(2),
-    },
+    }
 }));
 
 function StatsDisplayCard(props) {
@@ -37,10 +35,10 @@ function StatsDisplayCard(props) {
     return (
         <Card>
             <CardContent className={classes.card}>
-                <Typography component="h2" className={classes.title}>
+                <Typography component="h2" className={classes.text}>
                     {props.title}
                 </Typography>
-                <Typography className={classes.pos} color="textSecondary">
+                <Typography color="textSecondary" className={classes.text}>
                     {props.value}
                 </Typography>
             </CardContent>

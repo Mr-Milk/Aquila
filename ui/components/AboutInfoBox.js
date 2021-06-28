@@ -4,16 +4,14 @@ import Typography from "@material-ui/core/Typography";
 
 
 export default function AboutInfoBox(props) {
-    return <Accordion expanded={true}>
+    return <Accordion defaultExpanded={true}>
         <AccordionSummary
             expandIcon={<ExpandMoreIcon/>}
         >
-            <Typography style={{"font-style": "italic"}}>{props.title}</Typography>
+            <Typography style={{"fontStyle": "italic"}}>{props.title}</Typography>
         </AccordionSummary>
-        <AccordionDetails>
-            <Typography>
-                {props.children}
-            </Typography>
+        <AccordionDetails className={props.className}>
+            {props.children}
         </AccordionDetails>
     </Accordion>
 }

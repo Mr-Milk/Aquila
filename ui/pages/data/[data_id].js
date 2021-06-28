@@ -1,6 +1,6 @@
 import Layout from "../../components/layout";
 import {useRouter} from "next/router";
-import {allDataIDs} from "../../data/api";
+import {allDataIDs, dataRecord} from "../../data/api";
 import Typography from "@material-ui/core/Typography";
 import {makeStyles} from "@material-ui/core/styles";
 import Button from "@material-ui/core/Button";

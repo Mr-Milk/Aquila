@@ -9,14 +9,15 @@ import Link from "next/link";
 import {IconButton} from "@material-ui/core";
 
 const useStyles = makeStyles((theme) => ({
-    root: {
+    bar: {
         flexGrow: 1,
     },
-    title: {
-        flexGrow: 1,
-    },
-    logo: {
-        padding: "7px 2px 5px 2px",
+    AppLogo: {
+        padding: "0.2rem",
+        height: "50px",
+        [theme.breakpoints.down('sm')]: {
+            height: "40px",
+        }
     }
 }));
 
@@ -24,11 +25,11 @@ export default function Header() {
     const classes = useStyles();
 
     return (
-        <div className={classes.root}>
+        <div className={classes.bar}>
             <AppBar position="static">
                 <Toolbar>
-                    <a href="/" className={classes.title}>
-                        <img src="/header-logo.png" alt="logo" height="50px" className={classes.logo}/>
+                    <a href="/" className={classes.bar}>
+                        <img src="/header-logo.png" alt="logo" className={classes.AppLogo}/>
                     </a>
 
                     <Link href="/about">
@@ -39,8 +40,8 @@ export default function Header() {
                         </Tooltip>
                     </Link>
 
-                    <a href="https://github.com" target="_blank">
-                        <Tooltip title="Star us!">
+                    <a href="https://github.com/Mr-Milk/Aquila" target="_blank">
+                        <Tooltip title="Find us on Github!">
                             <IconButton aria-label="Github" color="inherit">
                                 <GitHubIcon/>
                             </IconButton>
