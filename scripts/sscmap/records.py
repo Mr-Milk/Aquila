@@ -159,8 +159,9 @@ class Record:
         neighbors_count = self.data.obs.cell_neighbors_count.mean()
         print(f"Current neighbor count {neighbors_count}")
 
-        st.spatial_co_expression(self.data, use_cell_type=True, selected_markers=selected_markers, corr_cutoff=0.5, **st_kwargs)
-
+        # st.spatial_co_expression(self.data, use_cell_type=True, selected_markers=selected_markers, corr_cutoff=0.5, **st_kwargs)
+        st.utils.df2adata_uns(pd.DataFrame(columns=["marker1", "marker2", "corr", "pvalue"]), self.data, "co_expression")
+        print(self.data.uns_keys())
         if self.meta.has_cell_type:
             if self.meta.resolution == -1:
                 ratio = 10 ** -4
@@ -290,7 +291,7 @@ class Record:
         co_exp = self.co_expression_tb
         co_exp_markers = pd.unique(
             [*co_exp["marker1"].unique(), *co_exp["marker2"].unique()]
-        )
+        ).tolist()
         co_exp_data = co_exp[["marker1", "marker2", "corr"]].to_numpy().tolist()
 
         self.DataStats = pd.DataFrame(

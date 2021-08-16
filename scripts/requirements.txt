@@ -1,0 +1,6 @@
+ujson
+scanpy
+crossrefapi
+python-dotenv
+sqlalchemy
+psycopg2

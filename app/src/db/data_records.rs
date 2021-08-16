@@ -45,7 +45,7 @@ impl DataRecords {
         let stats = DBStats{
             data_count: data.count,
             tissue_count: tissue.count,
-            disease_count: disease.count,
+            disease_count: disease_subtype.count,
         };
 
         Ok(stats)
